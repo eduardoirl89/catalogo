@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catálogo de Productos - Comercial Ricfrankar</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <!-- PORTADA SOLO PARA PDF (Oculta en la web) -->
+    <section class="pdf-cover">
+        <div class="pdf-cover-content">
+            <h1 class="pdf-cover-title">CATÁLOGO DE PRODUCTOS</h1>
+            <p class="pdf-cover-subtitle">Comercial Ricfrankar</p>
+            <div class="pdf-cover-divider"></div>
+            <p class="pdf-cover-info">Distribución al Mayor de Alimentos, Snacks y Confitería</p>
+        </div>
+    </section>
+
+    <!-- BARRA DE BÚSQUEDA Y ACCIONES (Oculta en impresión/PDF) -->
+    <header class="search-header">
+        <div class="search-container">
+            <input 
+                type="text" 
+                id="search-input" 
+                placeholder="Buscar por producto, marca o categoría..." 
+                oninput="filtrarProductos()"
+            />
+            <button onclick="exportarPDF()" class="export-btn" title="Exportar Catálogo a PDF">
+                📄 Exportar PDF
+            </button>
+        </div>
+    </header>
+
+    <main class="catalog-grid" id="product-grid">
+        <!-- Los productos se cargarán dinámicamente desde el script -->
+    </main>
+
+    <!-- Menú flotante compacto y minimalista -->
+    <div class="layout-switcher-menu">
+        <button onclick="setLayout('grid-4', event)" title="Vista de 4 columnas" class="layout-btn active">4 Col</button>
+        <button onclick="setLayout('grid-2', event)" title="Vista horizontal tipo PDF" class="layout-btn">2 Col</button>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

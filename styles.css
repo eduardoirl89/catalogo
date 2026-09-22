@@ -1,0 +1,414 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background-color: #f4f6f9;
+    color: #2c3e50;
+    padding: 15px;
+}
+
+/* --- PORTADA PDF (OCULTA EN MODO WEB) --- */
+.pdf-cover {
+    display: none;
+}
+
+/* --- BARRA DE BÚSQUEDA --- */
+.search-header {
+    max-width: 1200px;
+    margin: 0 auto 20px auto;
+}
+
+.search-container {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+#search-input {
+    flex: 1;
+    padding: 10px 16px;
+    font-size: 0.95rem;
+    border: 1px solid #cbd5e0;
+    border-radius: 6px;
+    outline: none;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+#search-input:focus {
+    border-color: #2c3e50;
+    box-shadow: 0 0 0 3px rgba(44, 62, 80, 0.15);
+}
+
+.export-btn {
+    background-color: #2c3e50;
+    color: #ffffff;
+    border: none;
+    padding: 10px 18px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    white-space: nowrap;
+}
+
+.export-btn:hover {
+    background-color: #1a252f;
+}
+
+.catalog-grid {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.category-section-title {
+    grid-column: 1 / -1;
+    margin-top: 30px;
+    margin-bottom: 12px;
+    border-bottom: 2px solid #2c3e50;
+    padding-bottom: 6px;
+}
+
+.category-section-title h2 {
+    font-size: 1.1rem;
+    color: #2c3e50;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.sub-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+/* --- TARJETA 4 COLUMNAS (Imagen más grande y textos compactos) --- */
+.product-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 8px;
+    text-align: center;
+    background-color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    min-height: 240px;
+}
+
+/* Clase dinámica para ocultar elementos mediante el buscador */
+.product-card.hidden {
+    display: none !important;
+}
+
+.product-info-wrapper {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+.product-image-container {
+    width: 100%;
+    height: 145px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 4px;
+    flex-shrink: 0;
+}
+
+.product-image-container img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.product-brand {
+    font-size: 0.55rem;
+    font-weight: 600;
+    color: #4a5568;
+    background: #edf2f7;
+    padding: 1px 5px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-bottom: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+    align-self: center;
+}
+
+.product-name {
+    font-size: 0.66rem;
+    font-weight: 600;
+    color: #1a202c;
+    margin-bottom: 2px;
+    line-height: 1.15;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.product-presentation {
+    font-size: 0.55rem;
+    color: #718096;
+    margin-bottom: 2px;
+    flex-shrink: 0;
+}
+
+.product-price {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #e53e3e;
+    background: #fff5f5;
+    padding: 2px 4px;
+    border-radius: 6px;
+    flex-shrink: 0;
+    margin-top: 2px;
+    letter-spacing: -0.2px;
+}
+
+/* --- MENÚ FLOTANTE COMPACTO Y MINIMALISTA --- */
+.layout-switcher-menu {
+    position: fixed;
+    bottom: 15px;
+    right: 15px;
+    background: rgba(44, 62, 80, 0.85);
+    backdrop-filter: blur(5px);
+    padding: 4px;
+    border-radius: 6px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    display: flex;
+    gap: 4px;
+    z-index: 9999;
+}
+
+.layout-btn {
+    background: transparent;
+    color: #ffffff;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-weight: 600;
+    transition: background 0.2s;
+}
+
+.layout-btn:hover {
+    background: rgba(255,255,255,0.15);
+}
+
+.layout-btn.active {
+    background: #e53e3e;
+}
+
+/* --- MODO HORIZONTAL 2 COLUMNAS --- */
+body.layout-grid-2 .sub-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 15px !important;
+}
+
+body.layout-grid-2 .product-card {
+    flex-direction: row !important;
+    align-items: center !important;
+    text-align: left !important;
+    height: 115px !important;
+    min-height: 115px !important;
+    max-height: 115px !important;
+    padding: 8px 12px !important;
+    display: grid;
+    grid-template-columns: 100px 1fr 105px;
+    gap: 10px;
+    justify-content: unset;
+}
+
+/* 1. Columna de la Imagen */
+body.layout-grid-2 .product-image-container {
+    width: 100px !important;
+    height: 100% !important;
+    margin-bottom: 0 !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 2. Columna central de Textos reducidos */
+body.layout-grid-2 .product-info-wrapper {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    overflow: hidden;
+    height: 100%;
+}
+
+body.layout-grid-2 .product-brand {
+    align-self: flex-start !important;
+    margin-bottom: 1px !important;
+    font-size: 0.52rem !important;
+    padding: 1px 3px !important;
+}
+
+body.layout-grid-2 .product-name {
+    justify-content: flex-start !important;
+    text-align: left !important;
+    height: auto !important;
+    max-height: 30px;
+    font-size: 0.64rem !important;
+    margin-bottom: 1px !important;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+body.layout-grid-2 .product-presentation {
+    align-self: flex-start !important;
+    margin-bottom: 0 !important;
+    font-size: 0.52rem !important;
+}
+
+/* 3. Columna derecha de Precios */
+body.layout-grid-2 .product-price {
+    grid-column: 3;
+    align-self: center !important;
+    justify-self: center;
+    width: 100%;
+    text-align: center;
+    margin-top: 0 !important;
+    padding: 6px 4px !important;
+    font-size: 0.95rem !important;
+    background: #fff5f5 !important;
+    border-radius: 6px;
+}
+
+@media (max-width: 900px) {
+    .sub-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .sub-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+    .product-card {
+        padding: 8px;
+        min-height: 240px;
+    }
+    .product-image-container {
+        height: 105px;
+    }
+    .product-name {
+        font-size: 0.65rem;
+    }
+    .product-price {
+        font-size: 0.9rem;
+    }
+}
+
+/* --- ESTILOS DE IMPRESIÓN (PDF) --- */
+@media print {
+    body {
+        padding: 0;
+        background-color: #ffffff !important;
+    }
+
+    .search-header,
+    .layout-switcher-menu {
+        display: none !important;
+    }
+
+    .pdf-cover {
+        display: flex !important;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        min-height: 280mm;
+        text-align: center;
+        page-break-after: always;
+        break-after: page;
+        padding: 40px;
+    }
+
+    .pdf-cover-content {
+        border: 3px solid #2c3e50;
+        padding: 60px 40px;
+        border-radius: 12px;
+        width: 85%;
+        max-width: 700px;
+    }
+
+    .pdf-cover-title {
+        font-size: 2.4rem;
+        color: #2c3e50;
+        margin-bottom: 12px;
+        letter-spacing: 2px;
+        font-weight: 800;
+    }
+
+    .pdf-cover-subtitle {
+        font-size: 1.4rem;
+        color: #e53e3e;
+        font-weight: 600;
+        text-transform: uppercase;
+        margin-bottom: 25px;
+    }
+
+    .pdf-cover-divider {
+        width: 100px;
+        height: 4px;
+        background-color: #2c3e50;
+        margin: 0 auto 25px auto;
+        border-radius: 2px;
+    }
+
+    .pdf-cover-info {
+        font-size: 1rem;
+        color: #4a5568;
+    }
+    
+    .category-section-title {
+        break-after: avoid;
+        page-break-after: avoid;
+        margin-top: 20px;
+        margin-bottom: 10px;
+    }
+
+    .sub-grid {
+        grid-template-columns: repeat(4, 1fr) !important;
+        gap: 12px !important;
+        break-inside: auto;
+    }
+
+    .product-card {
+        break-inside: avoid;
+        page-break-inside: avoid;
+        border: 1px solid #cbd5e0 !important;
+        box-shadow: none !important;
+        background-color: #ffffff !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    
+    .product-brand {
+        background: #edf2f7 !important;
+        -webkit-print-color-adjust: exact;
+    }
+    
+    .product-price {
+        background: #fff5f5 !important;
+        -webkit-print-color-adjust: exact;
+    }
+}
