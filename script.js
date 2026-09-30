@@ -3,6 +3,9 @@ const SUPABASE_PROJECT_URL = 'https://svruhyxfrfcafqjyziys.supabase.co';
 const SUPABASE_BUCKET_NAME = 'imagenes-catalogo';
 const SUPABASE_STORAGE_URL = `${SUPABASE_PROJECT_URL}/storage/v1/object/public/${SUPABASE_BUCKET_NAME}/`;
 
+// Imagen transparente de 1x1 px para frenar peticiones del navegador tras fallo definitivo
+const BLANK_IMAGE_PLACEHOLDER = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+
 let rawProductsData = [];
 let customImages = {}; 
 let companyLogoBase64 = ''; 
@@ -10,7 +13,6 @@ let qrLogoBase64 = '';
 let editModeActive = false;
 
 document.addEventListener("DOMContentLoaded", () => {
-    // Busca 'catalogo_productos.csv' por defecto al cargar la página
     fetch("catalogo_productos.csv")
         .then(res => {
             if (!res.ok) throw new Error("No se halló catalogo_productos.csv automático");
@@ -22,23 +24,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function toggleMainMenu() {
     const menu = document.getElementById('mainDropdownMenu');
-    if (menu) {
-        menu.classList.toggle('active');
-    }
+    if (menu) menu.classList.toggle('active');
 }
 
 function toggleMobileSearch() {
     const sidebar = document.getElementById('sidebarMenu');
-    if (sidebar) {
-        sidebar.classList.toggle('mobile-visible');
-    }
+    if (sidebar) sidebar.classList.toggle('mobile-visible');
 }
 
 function toggleCompanyCoverMobile() {
     const cover = document.getElementById('pdfCoverSection');
-    if (cover) {
-        cover.classList.toggle('mobile-visible');
-    }
+    if (cover) cover.classList.toggle('mobile-visible');
 }
 
 function toggleEditModeMobile() {
@@ -186,7 +182,7 @@ function parseCSV(text) {
         const name = cols[3] || '';
         const presentation = cols[4] || '';
         let rawPrice = cols[5] !== undefined ? cols[5] : '0.00';
-        let customUrl = cols[6] || ''; // Columna URL si está presente en el CSV
+        let customUrl = cols[6] || '';
 
         if (name) {
             const formattedPrice = formatExactPrice(rawPrice);
@@ -253,7 +249,7 @@ function renderCatalog(products) {
     });
 
     for (const [category, items] of Object.entries(grouped)) {
-        const pageSize = 12; // 3x4 por página para impresión PDF
+        const pageSize = 12; // 3x4 por página para PDF
         for (let i = 0; i < items.length; i += pageSize) {
             const pageItems = items.slice(i, i + pageSize);
 
@@ -268,14 +264,15 @@ function renderCatalog(products) {
             `;
 
             pageItems.forEach((prod) => {
-                // Determinar la fuente inicial de la imagen
                 let imageSrc = customImages[prod.code];
-                
+                let isDirectUrl = false;
+
                 if (!imageSrc) {
                     if (prod.customUrl && prod.customUrl.trim() !== '') {
                         imageSrc = prod.customUrl.trim();
+                        isDirectUrl = true;
                     } else {
-                        // Intento inicial predeterminado en Supabase con .png
+                        // Intento inicial predeterminado en Supabase (.png)
                         imageSrc = `${SUPABASE_STORAGE_URL}${prod.code}.png`;
                     }
                 }
@@ -284,7 +281,12 @@ function renderCatalog(products) {
                     <div class="product-card" onclick="triggerImageUpload('${prod.code}')">
                         <input type="file" id="file-${prod.code}" accept="image/*" style="display:none;" onchange="uploadProductImage(event, '${prod.code}')">
                         <div class="product-img-box">
-                            <img id="img-${prod.code}" src="${imageSrc}" onerror="handleImageError(this, '${prod.code}')" alt="${prod.name}">
+                            <img id="img-${prod.code}" 
+                                 src="${imageSrc}" 
+                                 loading="lazy"
+                                 data-is-direct="${isDirectUrl}"
+                                 onerror="handleImageError(this, '${prod.code}')" 
+                                 alt="${prod.name}">
                         </div>
                         <div class="product-info">
                             <span class="product-brand">${prod.brand}</span>
@@ -303,21 +305,36 @@ function renderCatalog(products) {
     }
 }
 
-/* MANEJO DE FORMATOS (.png, .jpg, .webp) Y MUESTRA FALTANTE SIN ROMPER EL DISEÑO */
+/**
+ * CONTROL DE ERRORES DE IMAGEN - ANTI-BUCLE Y PROTECCIÓN DE RED
+ */
 function handleImageError(imgElem, code) {
-    if (!imgElem.dataset.attempt) {
-        // Falló la primera extensión (ej. .png) -> Probar con .jpg en Supabase
+    // Si la imagen proviene de una URL directa del CSV o Base64 y falla, no reintentamos
+    if (imgElem.dataset.isDirect === "true") {
+        stopImageLoading(imgElem);
+        return;
+    }
+
+    const attempt = imgElem.dataset.attempt || "0";
+
+    if (attempt === "0") {
+        // Intento 1: Falló .png -> probar .jpg
         imgElem.dataset.attempt = "1";
         imgElem.src = `${SUPABASE_STORAGE_URL}${code}.jpg`;
-    } else if (imgElem.dataset.attempt === "1") {
-        // Falló .jpg -> Probar con .webp en Supabase
+    } else if (attempt === "1") {
+        // Intento 2: Falló .jpg -> probar .webp
         imgElem.dataset.attempt = "2";
         imgElem.src = `${SUPABASE_STORAGE_URL}${code}.webp`;
     } else {
-        // Si no se encuentra la imagen en ningún formato en Supabase (404), se oculta suavemente
-        imgElem.onerror = null;
-        imgElem.style.display = 'none';
+        // Intento 3: Fallaron todas las opciones -> detener intentos inmediatamente
+        stopImageLoading(imgElem);
     }
+}
+
+function stopImageLoading(imgElem) {
+    imgElem.onerror = null; // Remueve el handler para evitar disparos en bucle
+    imgElem.src = BLANK_IMAGE_PLACEHOLDER; // Corta la petición de red
+    imgElem.style.display = 'none'; // Oculta la imagen suavemente
 }
 
 function triggerImageUpload(code) {
@@ -338,6 +355,7 @@ function uploadProductImage(event, code) {
             customImages[code] = base64Img;
             const imgElem = document.getElementById(`img-${code}`);
             if (imgElem) {
+                imgElem.onerror = null; // Quita listeners de error
                 imgElem.src = base64Img;
                 imgElem.style.display = 'block';
             }
@@ -371,7 +389,6 @@ function filterProducts() {
         return matchSearch && matchCat;
     });
 
-    // Lógica de ordenamiento
     filtered.sort((a, b) => {
         switch (sortVal) {
             case 'name-asc':
