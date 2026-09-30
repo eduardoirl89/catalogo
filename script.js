@@ -1,26 +1,52 @@
-// CONFIGURACIÓN DE SUPABASE STORAGE
+// =========================================================================
+// CONFIGURACIÓN DE FUENTES DE DATOS E IMÁGENES
+// =========================================================================
+
+// 1. Pega aquí el enlace de tu CSV publicado desde Google Sheets
+const GOOGLE_SHEETS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQf6lHp7YR9F2iYzaTexYRHm1lyxJwblAj95GAQ-ekPfkPlGqqgUxM-S1yyeAnHuW9ZZXwBPIOi2TI_/pub?gid=412358378&single=true&output=csv";
+
+// 2. Configuración de Supabase Storage para imágenes de productos
 const SUPABASE_PROJECT_URL = 'https://svruhyxfrfcafqjyziys.supabase.co';
 const SUPABASE_BUCKET_NAME = 'imagenes-catalogo';
 const SUPABASE_STORAGE_URL = `${SUPABASE_PROJECT_URL}/storage/v1/object/public/${SUPABASE_BUCKET_NAME}/`;
 
-// Imagen transparente de 1x1 px para frenar peticiones del navegador tras fallo definitivo
-const BLANK_IMAGE_PLACEHOLDER = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+// 3. SVG marcador (Placeholder) liviano de 2KB para productos sin foto
+const PLACEHOLDER_SVG = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="0 0 24 24" fill="none" stroke="%23cbd5e1" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>';
 
+// Variables globales del catálogo
 let rawProductsData = [];
 let customImages = {}; 
 let companyLogoBase64 = ''; 
 let qrLogoBase64 = ''; 
 let editModeActive = false;
 
+// =========================================================================
+// CARGA INICIAL DE DATOS
+// =========================================================================
+
 document.addEventListener("DOMContentLoaded", () => {
-    fetch("catalogo_productos.csv")
+    fetch(GOOGLE_SHEETS_CSV_URL)
         .then(res => {
-            if (!res.ok) throw new Error("No se halló catalogo_productos.csv automático");
+            if (!res.ok) throw new Error("No se pudo obtener el CSV desde Google Sheets");
             return res.text();
         })
         .then(text => parseCSV(text))
-        .catch(() => renderEmptyMessage());
+        .catch(err => {
+            console.error("Error al cargar el catálogo:", err);
+            // Si falla la red o la URL no está disponible, intenta buscar el archivo local de respaldo
+            fetch("catalogo_productos.csv")
+                .then(res => {
+                    if (!res.ok) throw new Error("No hay copia local disponible");
+                    return res.text();
+                })
+                .then(text => parseCSV(text))
+                .catch(() => renderEmptyMessage());
+        });
 });
+
+// =========================================================================
+// INTERFAZ Y MODALES
+// =========================================================================
 
 function toggleMainMenu() {
     const menu = document.getElementById('mainDropdownMenu');
@@ -54,7 +80,7 @@ function closeModal() {
     document.getElementById('adminModal').style.display = 'none';
 }
 
-/* ENVIAR URL / MENSAJE POR WHATSAPP */
+/* Compartir por WhatsApp */
 function shareCatalogWhatsApp(event) {
     event.preventDefault();
     const currentUrl = encodeURIComponent(window.location.href);
@@ -62,7 +88,7 @@ function shareCatalogWhatsApp(event) {
     window.open(`https://api.whatsapp.com/send?text=${message}`, '_blank');
 }
 
-/* PERSONALIZACIÓN VISUAL */
+/* Personalización visual de portada */
 function changeCoverBgColor(color) {
     const cover = document.getElementById('pdfCoverSection');
     if (cover) cover.style.backgroundColor = color;
@@ -73,7 +99,10 @@ function changeCoverTextColor(color) {
     if (cover) cover.style.color = color;
 }
 
-/* EXPORTACIONES */
+// =========================================================================
+// EXPORTACIÓN Y LOGOS
+// =========================================================================
+
 function exportCSV() {
     if (rawProductsData.length === 0) {
         alert("No hay datos cargados para exportar.");
@@ -109,7 +138,6 @@ function exportEncodedImages() {
     downloadAnchor.remove();
 }
 
-/* CARGA DE LOGOTIPOS */
 function handleCompanyLogoUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -153,12 +181,19 @@ function handleCSVFile(event) {
     reader.readAsText(file);
 }
 
+// =========================================================================
+// PARSEO DE CSV Y CONSTRUCCIÓN DE OBJETOS
+// =========================================================================
+
 function parseCSV(text) {
     const lines = text.split(/\r\n|\n/);
     rawProductsData = [];
     const categoriesSet = new Set();
 
-    if (lines.length < 2) return;
+    if (lines.length < 2) {
+        renderEmptyMessage();
+        return;
+    }
 
     const firstLine = lines[0];
     const delimiter = firstLine.includes(';') ? ';' : ',';
@@ -207,7 +242,7 @@ function parseCSV(text) {
 
 function formatExactPrice(valStr) {
     if (!valStr) return '0.00';
-    let cleanStr = valStr.replace(/["'$]/g, '').trim().replace(',', '.');
+    let cleanStr = String(valStr).replace(/["'$]/g, '').trim().replace(',', '.');
     const match = cleanStr.match(/\d+(\.\d+)?/);
     if (!match) return '0.00';
 
@@ -223,8 +258,9 @@ function formatExactPrice(valStr) {
 
 function populateCategorySelect(categories) {
     const select = document.getElementById('categorySelect');
+    if (!select) return;
+    
     select.innerHTML = '<option value="all">Todas las categorías</option>';
-
     categories.forEach(cat => {
         const option = document.createElement('option');
         option.value = cat;
@@ -233,8 +269,27 @@ function populateCategorySelect(categories) {
     });
 }
 
+// =========================================================================
+// RENDERIZADO DE CATÁLOGO Y OPTIMIZACIÓN DE IMÁGENES
+// =========================================================================
+
+function getProductImageUrl(prod) {
+    // 1. Imagen subida manualmente en el navegador
+    if (customImages[prod.code]) return customImages[prod.code];
+
+    // 2. Enlace explícito indicado en la columna del CSV (URL)
+    if (prod.customUrl && prod.customUrl.trim() !== '') {
+        return prod.customUrl.trim();
+    }
+
+    // 3. Apunta por defecto al archivo en Supabase Storage
+    return `${SUPABASE_STORAGE_URL}${prod.code}.webp`;
+}
+
 function renderCatalog(products) {
     const container = document.getElementById('catalogContainer');
+    if (!container) return;
+    
     container.innerHTML = '';
 
     if (products.length === 0) {
@@ -249,7 +304,7 @@ function renderCatalog(products) {
     });
 
     for (const [category, items] of Object.entries(grouped)) {
-        const pageSize = 12; // 3x4 por página para PDF
+        const pageSize = 12; // Formato 3x4 por página para impresión PDF
         for (let i = 0; i < items.length; i += pageSize) {
             const pageItems = items.slice(i, i + pageSize);
 
@@ -264,18 +319,7 @@ function renderCatalog(products) {
             `;
 
             pageItems.forEach((prod) => {
-                let imageSrc = customImages[prod.code];
-                let isDirectUrl = false;
-
-                if (!imageSrc) {
-                    if (prod.customUrl && prod.customUrl.trim() !== '') {
-                        imageSrc = prod.customUrl.trim();
-                        isDirectUrl = true;
-                    } else {
-                        // Intento inicial predeterminado en Supabase (.png)
-                        imageSrc = `${SUPABASE_STORAGE_URL}${prod.code}.png`;
-                    }
-                }
+                const imageSrc = getProductImageUrl(prod);
 
                 html += `
                     <div class="product-card" onclick="triggerImageUpload('${prod.code}')">
@@ -284,7 +328,6 @@ function renderCatalog(products) {
                             <img id="img-${prod.code}" 
                                  src="${imageSrc}" 
                                  loading="lazy"
-                                 data-is-direct="${isDirectUrl}"
                                  onerror="handleImageError(this, '${prod.code}')" 
                                  alt="${prod.name}">
                         </div>
@@ -305,36 +348,19 @@ function renderCatalog(products) {
     }
 }
 
-/**
- * CONTROL DE ERRORES DE IMAGEN - ANTI-BUCLE Y PROTECCIÓN DE RED
- */
+// Control de carga de imagen con reintento controlado (máximo 1 reintento para prevenir bucles)
 function handleImageError(imgElem, code) {
-    // Si la imagen proviene de una URL directa del CSV o Base64 y falla, no reintentamos
-    if (imgElem.dataset.isDirect === "true") {
-        stopImageLoading(imgElem);
-        return;
-    }
-
     const attempt = imgElem.dataset.attempt || "0";
 
-    if (attempt === "0") {
-        // Intento 1: Falló .png -> probar .jpg
+    if (attempt === "0" && !imgElem.src.includes('data:image')) {
+        // Si falló el formato predeterminado .webp, prueba con .png
         imgElem.dataset.attempt = "1";
-        imgElem.src = `${SUPABASE_STORAGE_URL}${code}.jpg`;
-    } else if (attempt === "1") {
-        // Intento 2: Falló .jpg -> probar .webp
-        imgElem.dataset.attempt = "2";
-        imgElem.src = `${SUPABASE_STORAGE_URL}${code}.webp`;
+        imgElem.src = `${SUPABASE_STORAGE_URL}${code}.png`;
     } else {
-        // Intento 3: Fallaron todas las opciones -> detener intentos inmediatamente
-        stopImageLoading(imgElem);
+        // Si vuelve a fallar, corta las peticiones y asigna el marcador SVG
+        imgElem.onerror = null;
+        imgElem.src = PLACEHOLDER_SVG;
     }
-}
-
-function stopImageLoading(imgElem) {
-    imgElem.onerror = null; // Remueve el handler para evitar disparos en bucle
-    imgElem.src = BLANK_IMAGE_PLACEHOLDER; // Corta la petición de red
-    imgElem.style.display = 'none'; // Oculta la imagen suavemente
 }
 
 function triggerImageUpload(code) {
@@ -355,9 +381,8 @@ function uploadProductImage(event, code) {
             customImages[code] = base64Img;
             const imgElem = document.getElementById(`img-${code}`);
             if (imgElem) {
-                imgElem.onerror = null; // Quita listeners de error
+                imgElem.onerror = null;
                 imgElem.src = base64Img;
-                imgElem.style.display = 'block';
             }
             filterProducts();
         };
@@ -367,15 +392,19 @@ function uploadProductImage(event, code) {
 
 function renderEmptyMessage() {
     const container = document.getElementById('catalogContainer');
+    if (!container) return;
     container.innerHTML = `
         <div style="text-align:center; padding: 40px; background: #fff; border-radius: 8px; border: 1px dashed #cbd5e1;">
             <p style="color:#64748b; font-weight: 600;">No hay productos cargados.</p>
-            <p style="color:#94a3b8; font-size: 0.85em; margin-top: 6px;">Asegúrate de colocar <strong>catalogo_productos.csv</strong> en la carpeta del proyecto o usa el menú <strong>DATOS</strong> para importarlo.</p>
+            <p style="color:#94a3b8; font-size: 0.85em; margin-top: 6px;">Verifica el enlace publicado de Google Sheets o usa el menú <strong>DATOS</strong> para subir un archivo CSV.</p>
         </div>
     `;
 }
 
-/* BÚSQUEDA, FILTRADO Y ORDENAMIENTO DE PRODUCTOS */
+// =========================================================================
+// FILTROS, BÚSQUEDA Y ORDENAMIENTO
+// =========================================================================
+
 function filterProducts() {
     const searchVal = document.getElementById('searchInput').value.toLowerCase();
     const selectedCat = document.getElementById('categorySelect').value;
@@ -417,6 +446,8 @@ function filterProducts() {
 
 function setColumns(cols) {
     const container = document.getElementById('catalogContainer');
+    if (!container) return;
+    
     container.className = `cols-${cols}`;
 
     const btn2 = document.getElementById('btn2col');
