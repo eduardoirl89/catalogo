@@ -1,3 +1,8 @@
+// CONFIGURACIÓN DE SUPABASE STORAGE
+const SUPABASE_PROJECT_URL = 'https://svruhyxfrfcafqjyziys.supabase.co';
+const SUPABASE_BUCKET_NAME = 'imagenes-catalogo';
+const SUPABASE_STORAGE_URL = `${SUPABASE_PROJECT_URL}/storage/v1/object/public/${SUPABASE_BUCKET_NAME}/`;
+
 let rawProductsData = [];
 let customImages = {}; 
 let companyLogoBase64 = ''; 
@@ -5,7 +10,7 @@ let qrLogoBase64 = '';
 let editModeActive = false;
 
 document.addEventListener("DOMContentLoaded", () => {
-    // UNIFICADO: Busca 'catalogo_productos.csv' por defecto al cargar la página
+    // Busca 'catalogo_productos.csv' por defecto al cargar la página
     fetch("catalogo_productos.csv")
         .then(res => {
             if (!res.ok) throw new Error("No se halló catalogo_productos.csv automático");
@@ -72,22 +77,22 @@ function changeCoverTextColor(color) {
     if (cover) cover.style.color = color;
 }
 
-/* EXPORTACIONES (UNIFICADO A catalogo_productos.csv) */
+/* EXPORTACIONES */
 function exportCSV() {
     if (rawProductsData.length === 0) {
         alert("No hay datos cargados para exportar.");
         return;
     }
 
-    let csvContent = "data:text/csv;charset=utf-8,CODIGO;CATEGORIA;MARCA;NOMBRE;PRESENTACION;PRECIO\n";
+    let csvContent = "data:text/csv;charset=utf-8,CODIGO;CATEGORIA;MARCA;NOMBRE;PRESENTACION;PRECIO;URL\n";
     rawProductsData.forEach(p => {
-        csvContent += `"${p.code}";"${p.category}";"${p.brand}";"${p.name}";"${p.presentation}";"${p.priceString}"\n`;
+        csvContent += `"${p.code}";"${p.category}";"${p.brand}";"${p.name}";"${p.presentation}";"${p.priceString}";"${p.customUrl || ''}"\n`;
     });
 
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "catalogo_productos.csv"); // Nombre unificado
+    link.setAttribute("download", "catalogo_productos.csv");
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -119,6 +124,7 @@ function handleCompanyLogoUpload(event) {
         const logoImg = document.getElementById('companyLogoImg');
         if (logoImg) {
             logoImg.src = companyLogoBase64;
+            logoImg.style.display = 'block';
         }
     };
     reader.readAsDataURL(file);
@@ -134,6 +140,7 @@ function handleQRLogoUpload(event) {
         const qrImg = document.getElementById('qrLogoImg');
         if (qrImg) {
             qrImg.src = qrLogoBase64;
+            qrImg.style.display = 'block';
         }
     };
     reader.readAsDataURL(file);
@@ -178,7 +185,8 @@ function parseCSV(text) {
         const brand = cols[2] || 'GENERICO';
         const name = cols[3] || '';
         const presentation = cols[4] || '';
-        let rawPrice = cols[5] !== undefined ? cols[5] : cols[cols.length - 1];
+        let rawPrice = cols[5] !== undefined ? cols[5] : '0.00';
+        let customUrl = cols[6] || ''; // Columna URL si está presente en el CSV
 
         if (name) {
             const formattedPrice = formatExactPrice(rawPrice);
@@ -189,7 +197,8 @@ function parseCSV(text) {
                 name, 
                 presentation, 
                 priceString: formattedPrice,
-                priceNum: parseFloat(formattedPrice) || 0
+                priceNum: parseFloat(formattedPrice) || 0,
+                customUrl
             });
             categoriesSet.add(category);
         }
@@ -244,7 +253,7 @@ function renderCatalog(products) {
     });
 
     for (const [category, items] of Object.entries(grouped)) {
-        const pageSize = 12; // 3x4 por página
+        const pageSize = 12; // 3x4 por página para impresión PDF
         for (let i = 0; i < items.length; i += pageSize) {
             const pageItems = items.slice(i, i + pageSize);
 
@@ -259,7 +268,17 @@ function renderCatalog(products) {
             `;
 
             pageItems.forEach((prod) => {
-                const imageSrc = customImages[prod.code] || `img/${prod.code}.jpg`;
+                // Determinar la fuente inicial de la imagen
+                let imageSrc = customImages[prod.code];
+                
+                if (!imageSrc) {
+                    if (prod.customUrl && prod.customUrl.trim() !== '') {
+                        imageSrc = prod.customUrl.trim();
+                    } else {
+                        // Intento inicial predeterminado en Supabase con .png
+                        imageSrc = `${SUPABASE_STORAGE_URL}${prod.code}.png`;
+                    }
+                }
 
                 html += `
                     <div class="product-card" onclick="triggerImageUpload('${prod.code}')">
@@ -284,10 +303,19 @@ function renderCatalog(products) {
     }
 }
 
+/* MANEJO DE FORMATOS (.png, .jpg, .webp) Y MUESTRA FALTANTE SIN ROMPER EL DISEÑO */
 function handleImageError(imgElem, code) {
-    if (imgElem.src.endsWith('.jpg')) {
-        imgElem.src = `img/${code}.png`;
+    if (!imgElem.dataset.attempt) {
+        // Falló la primera extensión (ej. .png) -> Probar con .jpg en Supabase
+        imgElem.dataset.attempt = "1";
+        imgElem.src = `${SUPABASE_STORAGE_URL}${code}.jpg`;
+    } else if (imgElem.dataset.attempt === "1") {
+        // Falló .jpg -> Probar con .webp en Supabase
+        imgElem.dataset.attempt = "2";
+        imgElem.src = `${SUPABASE_STORAGE_URL}${code}.webp`;
     } else {
+        // Si no se encuentra la imagen en ningún formato en Supabase (404), se oculta suavemente
+        imgElem.onerror = null;
         imgElem.style.display = 'none';
     }
 }
