@@ -5,9 +5,10 @@ let qrLogoBase64 = '';
 let editModeActive = false;
 
 document.addEventListener("DOMContentLoaded", () => {
-    fetch("Listado260926.csv")
+    // UNIFICADO: Busca 'catalogo_productos.csv' por defecto al cargar la página
+    fetch("catalogo_productos.csv")
         .then(res => {
-            if (!res.ok) throw new Error("No se halló CSV automático");
+            if (!res.ok) throw new Error("No se halló catalogo_productos.csv automático");
             return res.text();
         })
         .then(text => parseCSV(text))
@@ -71,7 +72,7 @@ function changeCoverTextColor(color) {
     if (cover) cover.style.color = color;
 }
 
-/* EXPORTACIONES */
+/* EXPORTACIONES (UNIFICADO A catalogo_productos.csv) */
 function exportCSV() {
     if (rawProductsData.length === 0) {
         alert("No hay datos cargados para exportar.");
@@ -86,7 +87,7 @@ function exportCSV() {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "catalogo_exportado.csv");
+    link.setAttribute("download", "catalogo_productos.csv"); // Nombre unificado
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -323,7 +324,7 @@ function renderEmptyMessage() {
     container.innerHTML = `
         <div style="text-align:center; padding: 40px; background: #fff; border-radius: 8px; border: 1px dashed #cbd5e1;">
             <p style="color:#64748b; font-weight: 600;">No hay productos cargados.</p>
-            <p style="color:#94a3b8; font-size: 0.85em; margin-top: 6px;">Usa el menú <strong>DATOS</strong> para importar tu CSV o agregar productos.</p>
+            <p style="color:#94a3b8; font-size: 0.85em; margin-top: 6px;">Asegúrate de colocar <strong>catalogo_productos.csv</strong> en la carpeta del proyecto o usa el menú <strong>DATOS</strong> para importarlo.</p>
         </div>
     `;
 }
