@@ -1,167 +1,383 @@
-const gridContainer = document.getElementById('product-grid');
+let rawProductsData = [];
+let customImages = {}; 
+let companyLogoBase64 = ''; 
+let qrLogoBase64 = ''; 
+let editModeActive = false;
 
-async function cargarCatalogoCSV() {
-    try {
-        const respuesta = await fetch('productos.csv');
-        const dataTexto = await respuesta.text();
+document.addEventListener("DOMContentLoaded", () => {
+    fetch("Listado260926.csv")
+        .then(res => {
+            if (!res.ok) throw new Error("No se halló CSV automático");
+            return res.text();
+        })
+        .then(text => parseCSV(text))
+        .catch(() => renderEmptyMessage());
+});
 
-        const lineas = dataTexto.split('\n');
-        gridContainer.innerHTML = '';
-
-        const categoriasMap = {};
-
-        for (let i = 1; i < lineas.length; i++) {
-            const linea = lineas[i].trim();
-            if (!linea) continue;
-
-            const columnas = linea.split(',');
-            
-            const rawPrice = parseFloat(columnas[5]?.trim());
-            const formattedPrice = !isNaN(rawPrice) ? "$" + rawPrice.toFixed(2) : "$0.00";
-
-            const producto = {
-                code: columnas[0]?.trim(),
-                category: columnas[1]?.trim() || 'General',
-                brand: columnas[2]?.trim(),
-                name: columnas[3]?.trim(),
-                presentation: columnas[4]?.trim(),
-                price: formattedPrice
-            };
-
-            if (!categoriasMap[producto.category]) {
-                categoriasMap[producto.category] = [];
-            }
-            categoriasMap[producto.category].push(producto);
-        }
-
-        for (const [categoria, productos] of Object.entries(categoriasMap)) {
-            const tituloSeccion = document.createElement('div');
-            tituloSeccion.className = 'category-section-title';
-            tituloSeccion.innerHTML = `<h2>${categoria}</h2>`;
-            gridContainer.appendChild(tituloSeccion);
-
-            const subGrid = document.createElement('div');
-            subGrid.className = 'sub-grid';
-
-            productos.forEach(producto => {
-                const card = document.createElement('div');
-                card.className = 'product-card';
-                
-                // Guardar los datos en minusculas para facilitar la busqueda
-                const stringBusqueda = `${producto.name} ${producto.brand} ${producto.category}`.toLowerCase();
-                card.setAttribute('data-search', stringBusqueda);
-
-                const extensiones = ['.jpg', '.jpeg', '.png', '.JPG', '.PNG'];
-                let indexExt = 0;
-
-                const imgElement = document.createElement('img');
-                imgElement.alt = producto.name;
-                
-                imgElement.onerror = function() {
-                    indexExt++;
-                    if (indexExt < extensiones.length) {
-                        this.src = `img/${producto.code}${extensiones[indexExt]}`;
-                    } else {
-                        this.src = 'https://via.placeholder.com/120?text=Sin+Imagen';
-                    }
-                };
-
-                imgElement.src = `img/${producto.code}${extensiones[0]}`;
-
-                const imageContainer = document.createElement('div');
-                imageContainer.className = 'product-image-container';
-                imageContainer.appendChild(imgElement);
-
-                card.innerHTML = `
-                    <div class="product-info-wrapper">
-                        <div class="product-brand">${producto.brand}</div>
-                        <div class="product-name" title="${producto.name}">${producto.name}</div>
-                        <div class="product-presentation">${producto.presentation}</div>
-                    </div>
-                    <div class="product-price">${producto.price}</div>
-                `;
-                
-                card.insertBefore(imageContainer, card.firstChild);
-                subGrid.appendChild(card);
-            });
-
-            gridContainer.appendChild(subGrid);
-        }
-
-        // Re-aplicar busqueda si existia un término previo antes del renderizado
-        filtrarProductos();
-
-    } catch (error) {
-        console.error("Error al cargar el archivo CSV:", error);
-        gridContainer.innerHTML = "<p style='text-align:center;'>Error al cargar los datos del catálogo.</p>";
+function toggleMainMenu() {
+    const menu = document.getElementById('mainDropdownMenu');
+    if (menu) {
+        menu.classList.toggle('active');
     }
 }
 
-function filtrarProductos() {
-    const term = document.getElementById('search-input').value.toLowerCase().trim();
-    const subGrids = document.querySelectorAll('.sub-grid');
+function toggleMobileSearch() {
+    const sidebar = document.getElementById('sidebarMenu');
+    if (sidebar) {
+        sidebar.classList.toggle('mobile-visible');
+    }
+}
 
-    subGrids.forEach(subGrid => {
-        const cards = subGrid.querySelectorAll('.product-card');
-        let productosVisibles = 0;
+function toggleCompanyCoverMobile() {
+    const cover = document.getElementById('pdfCoverSection');
+    if (cover) {
+        cover.classList.toggle('mobile-visible');
+    }
+}
 
-        cards.forEach(card => {
-            const searchData = card.getAttribute('data-search') || '';
-            if (searchData.includes(term)) {
-                card.classList.remove('hidden');
-                productosVisibles++;
-            } else {
-                card.classList.add('hidden');
-            }
-        });
+function toggleEditModeMobile() {
+    editModeActive = !editModeActive;
+    const btn = document.getElementById('editModeBtnMobile');
+    if (btn) {
+        btn.textContent = `MODO EDICIÓN: ${editModeActive ? 'ACTIVADO' : 'DESACTIVADO'}`;
+        btn.style.backgroundColor = editModeActive ? '#16a34a' : '#3b82f6';
+    }
+}
 
-        // Ocultar la categoría completa si no posee productos coincidentes
-        const tituloSeccion = subGrid.previousElementSibling;
-        if (tituloSeccion && tituloSeccion.classList.contains('category-section-title')) {
-            if (productosVisibles > 0) {
-                tituloSeccion.style.display = '';
-                subGrid.style.display = '';
-            } else {
-                tituloSeccion.style.display = 'none';
-                subGrid.style.display = 'none';
-            }
+function openModal() {
+    document.getElementById('adminModal').style.display = 'flex';
+}
+
+function closeModal() {
+    document.getElementById('adminModal').style.display = 'none';
+}
+
+/* ENVIAR URL / MENSAJE POR WHATSAPP */
+function shareCatalogWhatsApp(event) {
+    event.preventDefault();
+    const currentUrl = encodeURIComponent(window.location.href);
+    const message = encodeURIComponent(`Hola, te comparto el catálogo digital de productos: ${decodeURIComponent(currentUrl)}`);
+    window.open(`https://api.whatsapp.com/send?text=${message}`, '_blank');
+}
+
+/* PERSONALIZACIÓN VISUAL */
+function changeCoverBgColor(color) {
+    const cover = document.getElementById('pdfCoverSection');
+    if (cover) cover.style.backgroundColor = color;
+}
+
+function changeCoverTextColor(color) {
+    const cover = document.getElementById('pdfCoverSection');
+    if (cover) cover.style.color = color;
+}
+
+/* EXPORTACIONES */
+function exportCSV() {
+    if (rawProductsData.length === 0) {
+        alert("No hay datos cargados para exportar.");
+        return;
+    }
+
+    let csvContent = "data:text/csv;charset=utf-8,CODIGO;CATEGORIA;MARCA;NOMBRE;PRESENTACION;PRECIO\n";
+    rawProductsData.forEach(p => {
+        csvContent += `"${p.code}";"${p.category}";"${p.brand}";"${p.name}";"${p.presentation}";"${p.priceString}"\n`;
+    });
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "catalogo_exportado.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function exportEncodedImages() {
+    if (Object.keys(customImages).length === 0) {
+        alert("No hay imágenes codificadas personalizadas cargadas.");
+        return;
+    }
+
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(customImages));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", "imagenes_codificadas.json");
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+}
+
+/* CARGA DE LOGOTIPOS */
+function handleCompanyLogoUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        companyLogoBase64 = e.target.result;
+        const logoImg = document.getElementById('companyLogoImg');
+        if (logoImg) {
+            logoImg.src = companyLogoBase64;
         }
+    };
+    reader.readAsDataURL(file);
+}
+
+function handleQRLogoUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        qrLogoBase64 = e.target.result;
+        const qrImg = document.getElementById('qrLogoImg');
+        if (qrImg) {
+            qrImg.src = qrLogoBase64;
+        }
+    };
+    reader.readAsDataURL(file);
+}
+
+function handleCSVFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        parseCSV(e.target.result);
+    };
+    reader.readAsText(file);
+}
+
+function parseCSV(text) {
+    const lines = text.split(/\r\n|\n/);
+    rawProductsData = [];
+    const categoriesSet = new Set();
+
+    if (lines.length < 2) return;
+
+    const firstLine = lines[0];
+    const delimiter = firstLine.includes(';') ? ';' : ',';
+
+    for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+
+        const regex = new RegExp(`(?:^|${delimiter})(?:"([^"]*)"|([^"${delimiter}]*))`, 'g');
+        const cols = [];
+        let match;
+
+        while ((match = regex.exec(line)) !== null) {
+            let val = match[1] !== undefined ? match[1] : match[2];
+            cols.push(val ? val.trim() : '');
+        }
+
+        const code = cols[0] || '';
+        const category = cols[1] || 'VARIOS';
+        const brand = cols[2] || 'GENERICO';
+        const name = cols[3] || '';
+        const presentation = cols[4] || '';
+        let rawPrice = cols[5] !== undefined ? cols[5] : cols[cols.length - 1];
+
+        if (name) {
+            const formattedPrice = formatExactPrice(rawPrice);
+            rawProductsData.push({
+                code, 
+                category, 
+                brand, 
+                name, 
+                presentation, 
+                priceString: formattedPrice,
+                priceNum: parseFloat(formattedPrice) || 0
+            });
+            categoriesSet.add(category);
+        }
+    }
+
+    populateCategorySelect(Array.from(categoriesSet));
+    renderCatalog(rawProductsData);
+    closeModal();
+}
+
+function formatExactPrice(valStr) {
+    if (!valStr) return '0.00';
+    let cleanStr = valStr.replace(/["'$]/g, '').trim().replace(',', '.');
+    const match = cleanStr.match(/\d+(\.\d+)?/);
+    if (!match) return '0.00';
+
+    let validNumberStr = match[0];
+    let parts = validNumberStr.split('.');
+    if (parts.length === 1) {
+        return parts[0] + '.00';
+    } else if (parts[1].length === 1) {
+        return parts[0] + '.' + parts[1] + '0';
+    }
+    return validNumberStr;
+}
+
+function populateCategorySelect(categories) {
+    const select = document.getElementById('categorySelect');
+    select.innerHTML = '<option value="all">Todas las categorías</option>';
+
+    categories.forEach(cat => {
+        const option = document.createElement('option');
+        option.value = cat;
+        option.textContent = cat;
+        select.appendChild(option);
     });
 }
 
-function exportarPDF() {
-    window.print();
-}
+function renderCatalog(products) {
+    const container = document.getElementById('catalogContainer');
+    container.innerHTML = '';
 
-function setLayout(mode, event) {
-    const body = document.body;
-    const buttons = document.querySelectorAll('.layout-btn');
-    
-    buttons.forEach(btn => btn.classList.remove('active'));
-    
-    if (mode === 'grid-2') {
-        body.classList.add('layout-grid-2');
-        if (event) event.currentTarget.classList.add('active');
-        localStorage.setItem('catalog_layout', 'grid-2');
-    } else {
-        body.classList.remove('layout-grid-2');
-        if (event) event.currentTarget.classList.add('active');
-        localStorage.setItem('catalog_layout', 'grid-4');
+    if (products.length === 0) {
+        renderEmptyMessage();
+        return;
     }
 
-    // Volver a ejecutar el filtro tras alternar la vista
-    filtrarProductos();
-}
+    const grouped = {};
+    products.forEach(p => {
+        if (!grouped[p.category]) grouped[p.category] = [];
+        grouped[p.category].push(p);
+    });
 
-window.addEventListener('DOMContentLoaded', () => {
-    cargarCatalogoCSV();
-    const savedLayout = localStorage.getItem('catalog_layout');
-    if (savedLayout === 'grid-2') {
-        document.body.classList.add('layout-grid-2');
-        const buttons = document.querySelectorAll('.layout-btn');
-        if (buttons.length >= 2) {
-            buttons[0].classList.remove('active');
-            buttons[1].classList.add('active');
+    for (const [category, items] of Object.entries(grouped)) {
+        const pageSize = 12; // 3x4 por página
+        for (let i = 0; i < items.length; i += pageSize) {
+            const pageItems = items.slice(i, i + pageSize);
+
+            const pageBlock = document.createElement('div');
+            pageBlock.className = 'page-block category-group';
+
+            let html = `
+                <aside class="category-sidebar">
+                    <span class="category-title-text">${category}</span>
+                </aside>
+                <div class="products-grid">
+            `;
+
+            pageItems.forEach((prod) => {
+                const imageSrc = customImages[prod.code] || `img/${prod.code}.jpg`;
+
+                html += `
+                    <div class="product-card" onclick="triggerImageUpload('${prod.code}')">
+                        <input type="file" id="file-${prod.code}" accept="image/*" style="display:none;" onchange="uploadProductImage(event, '${prod.code}')">
+                        <div class="product-img-box">
+                            <img id="img-${prod.code}" src="${imageSrc}" onerror="handleImageError(this, '${prod.code}')" alt="${prod.name}">
+                        </div>
+                        <div class="product-info">
+                            <span class="product-brand">${prod.brand}</span>
+                            <div class="product-name" title="${prod.name}">${prod.name}</div>
+                            <span class="product-package">${prod.presentation}</span>
+                            <div class="product-price-tag">$${prod.priceString}</div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `</div>`;
+            pageBlock.innerHTML = html;
+            container.appendChild(pageBlock);
         }
     }
-});
+}
+
+function handleImageError(imgElem, code) {
+    if (imgElem.src.endsWith('.jpg')) {
+        imgElem.src = `img/${code}.png`;
+    } else {
+        imgElem.style.display = 'none';
+    }
+}
+
+function triggerImageUpload(code) {
+    if (window.innerWidth <= 768 && !editModeActive) {
+        return;
+    }
+    const input = document.getElementById(`file-${code}`);
+    if (input) input.click();
+}
+
+function uploadProductImage(event, code) {
+    event.stopPropagation();
+    const file = event.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const base64Img = e.target.result;
+            customImages[code] = base64Img;
+            const imgElem = document.getElementById(`img-${code}`);
+            if (imgElem) {
+                imgElem.src = base64Img;
+                imgElem.style.display = 'block';
+            }
+            filterProducts();
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+function renderEmptyMessage() {
+    const container = document.getElementById('catalogContainer');
+    container.innerHTML = `
+        <div style="text-align:center; padding: 40px; background: #fff; border-radius: 8px; border: 1px dashed #cbd5e1;">
+            <p style="color:#64748b; font-weight: 600;">No hay productos cargados.</p>
+            <p style="color:#94a3b8; font-size: 0.85em; margin-top: 6px;">Usa el menú <strong>DATOS</strong> para importar tu CSV o agregar productos.</p>
+        </div>
+    `;
+}
+
+/* BÚSQUEDA, FILTRADO Y ORDENAMIENTO DE PRODUCTOS */
+function filterProducts() {
+    const searchVal = document.getElementById('searchInput').value.toLowerCase();
+    const selectedCat = document.getElementById('categorySelect').value;
+    const sortVal = document.getElementById('sortSelect').value;
+
+    let filtered = rawProductsData.filter(p => {
+        const matchSearch = p.name.toLowerCase().includes(searchVal) || 
+                            p.code.toLowerCase().includes(searchVal) || 
+                            p.brand.toLowerCase().includes(searchVal);
+        const matchCat = (selectedCat === 'all' || p.category === selectedCat);
+        return matchSearch && matchCat;
+    });
+
+    // Lógica de ordenamiento
+    filtered.sort((a, b) => {
+        switch (sortVal) {
+            case 'name-asc':
+                return a.name.localeCompare(b.name);
+            case 'name-desc':
+                return b.name.localeCompare(a.name);
+            case 'price-asc':
+                return a.priceNum - b.priceNum;
+            case 'price-desc':
+                return b.priceNum - a.priceNum;
+            case 'category-asc':
+                return a.category.localeCompare(b.category);
+            case 'category-desc':
+                return b.category.localeCompare(a.category);
+            case 'brand-asc':
+                return a.brand.localeCompare(b.brand);
+            case 'brand-desc':
+                return b.brand.localeCompare(a.brand);
+            default:
+                return 0;
+        }
+    });
+
+    renderCatalog(filtered);
+}
+
+function setColumns(cols) {
+    const container = document.getElementById('catalogContainer');
+    container.className = `cols-${cols}`;
+
+    const btn2 = document.getElementById('btn2col');
+    const btn4 = document.getElementById('btn4col');
+
+    if (btn2 && btn4) {
+        btn2.classList.toggle('active', cols === 2);
+        btn4.classList.toggle('active', cols === 4);
+    }
+}

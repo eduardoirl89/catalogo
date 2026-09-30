@@ -3,44 +3,183 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Catálogo de Productos - Comercial Ricfrankar</title>
+    <title>Catálogo Web de Productos</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
-    <!-- PORTADA SOLO PARA PDF (Oculta en la web) -->
-    <section class="pdf-cover">
-        <div class="pdf-cover-content">
-            <h1 class="pdf-cover-title">CATÁLOGO DE PRODUCTOS</h1>
-            <p class="pdf-cover-subtitle">Comercial Ricfrankar</p>
-            <div class="pdf-cover-divider"></div>
-            <p class="pdf-cover-info">Distribución al Mayor de Alimentos, Snacks y Confitería</p>
+    <!-- TOP BAR (BARRA SUPERIOR) -->
+    <header class="top-bar">
+        <div class="top-bar-left">
+            <button class="search-toggle-btn" onclick="toggleMobileSearch()" aria-label="Buscar">🔍</button>
+            <div class="user-session-info" id="sessionLabel">Invitado / Sin Empresa</div>
         </div>
-    </section>
+        
+        <!-- BOTÓN HAMBURGUESA GENERAL (SITUA EL MENÚ EN LA ESQUINA SUPERIOR DERECHA) -->
+        <button class="hamburger-btn" onclick="toggleMainMenu()" aria-label="Menú">☰</button>
 
-    <!-- BARRA DE BÚSQUEDA Y ACCIONES (Oculta en impresión/PDF) -->
-    <header class="search-header">
-        <div class="search-container">
-            <input 
-                type="text" 
-                id="search-input" 
-                placeholder="Buscar por producto, marca o categoría..." 
-                oninput="filtrarProductos()"
-            />
-            <button onclick="exportarPDF()" class="export-btn" title="Exportar Catálogo a PDF">
-                📄 Exportar PDF
-            </button>
-        </div>
+        <!-- MENÚ DESPLEGABLE PRINCIPAL DE OPCIONES -->
+        <nav class="main-dropdown-menu" id="mainDropdownMenu">
+            <button class="btn-login-option" onclick="alert('Iniciar Sesión')">LOGIN</button>
+            <button class="btn-company-option mobile-only-btn" onclick="toggleCompanyCoverMobile()">EMPRESA</button>
+            <button class="btn-edit-option mobile-only-btn" id="editModeBtnMobile" onclick="toggleEditModeMobile()">MODO EDICIÓN: DESACTIVADO</button>
+            <button class="desktop-only-btn" id="btn2col" onclick="setColumns(2)">VISTA 2 COLUMNAS</button>
+            <button class="desktop-only-btn active" id="btn4col" onclick="setColumns(4)">VISTA 4 COLUMNAS</button>
+            <button class="btn-pdf" onclick="window.print()">EXPORTAR PDF</button>
+            <button class="btn-admin" onclick="openModal()">DATOS</button>
+        </nav>
     </header>
 
-    <main class="catalog-grid" id="product-grid">
-        <!-- Los productos se cargarán dinámicamente desde el script -->
-    </main>
+    <!-- LAYOUT PRINCIPAL -->
+    <div class="main-layout">
+        
+        <!-- SIDEBAR DE FILTROS Y ORDENAMIENTO -->
+        <aside class="sidebar-filters" id="sidebarMenu">
+            <div class="sidebar-header">
+                <h3>Filtros</h3>
+            </div>
 
-    <!-- Menú flotante compacto y minimalista -->
-    <div class="layout-switcher-menu">
-        <button onclick="setLayout('grid-4', event)" title="Vista de 4 columnas" class="layout-btn active">4 Col</button>
-        <button onclick="setLayout('grid-2', event)" title="Vista horizontal tipo PDF" class="layout-btn">2 Col</button>
+            <div class="filter-group">
+                <label for="searchInput">Buscar Producto</label>
+                <input type="text" id="searchInput" placeholder="Ej. choco..." oninput="filterProducts()">
+            </div>
+
+            <div class="filter-group">
+                <label for="categorySelect">Categoría</label>
+                <select id="categorySelect" onchange="filterProducts()">
+                    <option value="all">Todas las categorías</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label for="sortSelect">Ordenar por</label>
+                <select id="sortSelect" onchange="filterProducts()">
+                    <option value="default">Por defecto</option>
+                    <option value="name-asc">Nombre (A - Z)</option>
+                    <option value="name-desc">Nombre (Z - A)</option>
+                    <option value="price-asc">Precio: Menor a Mayor</option>
+                    <option value="price-desc">Precio: Mayor a Menor</option>
+                    <option value="category-asc">Categoría (A - Z)</option>
+                    <option value="category-desc">Categoría (Z - A)</option>
+                    <option value="brand-asc">Marca (A - Z)</option>
+                    <option value="brand-desc">Marca (Z - A)</option>
+                </select>
+            </div>
+        </aside>
+
+        <!-- ÁREA DE CONTENIDO -->
+        <main class="content-area">
+            
+            <!-- PORTADA / MEMBRETE DE EMPRESA -->
+            <section class="pdf-cover" id="pdfCoverSection">
+                <div class="cover-header">
+                    <span class="company-name" contenteditable="true">MI EMPRESA C.A.</span>
+                    <span class="cover-title-inline" contenteditable="true">CATÁLOGO DE PRODUCTOS</span>
+                    <span class="cover-rif" contenteditable="true">RIF: J-00000000-0</span>
+                </div>
+                
+                <div class="cover-body">
+                    <div class="cover-top-half">
+                        <img id="companyLogoImg" class="company-logo-img" src="" alt="Logo Empresa" style="display:none;">
+                    </div>
+
+                    <div class="cover-bottom-half">
+                        <img id="qrLogoImg" class="qr-logo-img" src="" alt="Código QR" style="display:none;">
+                    </div>
+                </div>
+                
+                <div class="cover-footer">
+                    <span contenteditable="true">RIF: J-00000000-0</span>
+                    <span contenteditable="true">Contacto: +58 000 0000000</span>
+                    <span contenteditable="true">Redes: @miempresa</span>
+                    <span contenteditable="true">Dirección: Ciudad Bolívar, Venezuela</span>
+                    <span contenteditable="true">Fecha: SEPTIEMBRE 2026</span>
+                </div>
+            </section>
+
+            <!-- CONTENEDOR DINÁMICO DE PRODUCTOS -->
+            <div id="catalogContainer" class="cols-4"></div>
+
+        </main>
+    </div>
+
+    <!-- BOTÓN FLOTANTE DE WHATSAPP (INFERIOR DERECHO) -->
+    <a href="#" class="whatsapp-float-btn" onclick="shareCatalogWhatsApp(event)" title="Compartir por WhatsApp">
+        🟢 WhatsApp
+    </a>
+
+    <!-- MODAL DE GESTIÓN Y PERSONALIZACIÓN DE DATOS -->
+    <div class="modal-overlay" id="adminModal" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Gestión de Datos y Personalización</h3>
+                <span class="close-btn" onclick="closeModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                
+                <!-- 1. IMPORTAR Y EXPORTAR CSV LADO A LADO -->
+                <div class="modal-section">
+                    <h4>1. Gestión de Archivos CSV</h4>
+                    <p class="help-text">Importa tu inventario o descarga el listado procesado.</p>
+                    <div class="two-cols-grid">
+                        <div class="form-group">
+                            <label for="csvFileInput">Importar CSV:</label>
+                            <input type="file" id="csvFileInput" accept=".csv" onchange="handleCSVFile(event)">
+                        </div>
+                        <div class="form-group flex-end">
+                            <label>&nbsp;</label>
+                            <button class="btn-action" onclick="exportCSV()">Exportar CSV</button>
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="section-divider">
+
+                <!-- 2. LOGO EMPRESA Y LOGO QR LADO A LADO -->
+                <div class="modal-section">
+                    <h4>2. Logotipos de Portada</h4>
+                    <div class="two-cols-grid">
+                        <div class="form-group">
+                            <label for="companyLogoInput">Logo Empresa:</label>
+                            <input type="file" id="companyLogoInput" accept="image/*" onchange="handleCompanyLogoUpload(event)">
+                        </div>
+                        <div class="form-group">
+                            <label for="qrLogoInput">Logo Código QR:</label>
+                            <input type="file" id="qrLogoInput" accept="image/*" onchange="handleQRLogoUpload(event)">
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="section-divider">
+
+                <!-- 3. COLOR FONDO Y COLOR TEXTO LADO A LADO -->
+                <div class="modal-section">
+                    <h4>3. Personalización Visual de Portada</h4>
+                    <div class="two-cols-grid">
+                        <div class="form-group">
+                            <label for="coverBgColor">Color Fondo:</label>
+                            <input type="color" id="coverBgColor" value="#000000" onchange="changeCoverBgColor(this.value)">
+                        </div>
+                        <div class="form-group">
+                            <label for="coverTextColor">Color Texto:</label>
+                            <input type="color" id="coverTextColor" value="#ffffff" onchange="changeCoverTextColor(this.value)">
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="section-divider">
+
+                <!-- 4. RESPALDO DE IMÁGENES -->
+                <div class="modal-section">
+                    <h4>4. Respaldo de Imágenes</h4>
+                    <button class="btn-action" onclick="exportEncodedImages()">Exportar Imágenes (JSON)</button>
+                </div>
+
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeModal()">Cerrar</button>
+            </div>
+        </div>
     </div>
 
     <script src="script.js"></script>
