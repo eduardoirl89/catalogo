@@ -442,14 +442,16 @@ body {
     }
 }
 
-/* REGLAS DE IMPRESIÓN PDF PERFECTAS */
+/* REGLAS DE IMPRESIÓN PDF PERFECTAS (PC Y MÓVIL) */
 @page {
-    size: letter portrait;
-    margin: 6px; /* Márgenes superior, inferior, izquierdo y derecho de 6px */
+    size: letter portrait; /* 215.9mm x 279.4mm */
+    margin: 6px; /* Márgenes exactos de 6px */
 }
 
 @media print {
-    .top-bar, .secondary-bar, .sidebar-filters, .hamburger-btn, .main-dropdown-menu, .whatsapp-float-btn, .category-brand-strip { 
+    /* Ocultar elementos de navegación e interfaz web */
+    .top-bar, .secondary-bar, .sidebar-filters, .hamburger-btn, 
+    .main-dropdown-menu, .whatsapp-float-btn, .category-brand-strip { 
         display: none !important; 
     }
 
@@ -462,14 +464,15 @@ body {
         display: block !important;
     }
 
+    /* PORTADA / MEMBRETE (Ajustado en mm fijos para evitar cortes en móviles) */
     .pdf-cover, #pdfCoverSection {
         page-break-before: auto !important;
         page-break-after: always !important;
         break-after: page !important;
-        height: calc(100vh - 12px) !important;
+        height: 265mm !important; /* Alto físico fijo que cabe perfecto en hoja Carta */
         width: 100% !important;
         margin: 0 !important;
-        padding: 20px !important;
+        padding: 15mm 10mm !important;
         border-radius: 0 !important;
         box-sizing: border-box !important;
         display: flex !important;
@@ -480,7 +483,12 @@ body {
         print-color-adjust: exact;
     }
 
-    .cover-header { border-bottom: 1px solid rgba(255,255,255,0.2) !important; padding-bottom: 10px !important; }
+    .cover-header { 
+        border-bottom: 1px solid rgba(255,255,255,0.2) !important; 
+        padding-bottom: 10px !important; 
+        width: 100% !important;
+    }
+    
     .company-name { font-size: 1.1em !important; }
     .cover-title-inline { font-size: 1.2em !important; }
     .cover-rif { font-size: 0.9em !important; }
@@ -492,17 +500,27 @@ body {
         flex-direction: column !important;
         justify-content: space-around !important;
         align-items: center !important;
-        margin: 20px 0 !important;
+        margin: 15mm 0 !important;
     }
 
-    .cover-top-half { flex: 1 !important; display: flex !important; align-items: center !important; justify-content: center !important; }
-    .cover-bottom-half { flex: 1 !important; display: flex !important; align-items: center !important; justify-content: center !important; }
+    .cover-top-half, .cover-bottom-half { 
+        flex: 1 !important; 
+        display: flex !important; 
+        align-items: center !important; 
+        justify-content: center !important; 
+    }
 
-    .company-logo-img { display: block !important; max-width: 320px !important; max-height: 170px !important; object-fit: contain !important; }
-    .qr-logo-img { display: block !important; max-width: 200px !important; max-height: 200px !important; object-fit: contain !important; background: transparent !important; padding: 0 !important; }
+    .company-logo-img { display: block !important; max-width: 280px !important; max-height: 150px !important; object-fit: contain !important; }
+    .qr-logo-img { display: block !important; max-width: 180px !important; max-height: 180px !important; object-fit: contain !important; background: transparent !important; padding: 0 !important; }
 
-    .cover-footer { font-size: 0.75em !important; border-top: 1px solid rgba(255,255,255,0.2) !important; padding-top: 8px !important; }
+    .cover-footer { 
+        font-size: 0.75em !important; 
+        border-top: 1px solid rgba(255,255,255,0.2) !important; 
+        padding-top: 8px !important; 
+        width: 100% !important;
+    }
 
+    /* CONTENEDOR DE PÁGINAS DEL CATÁLOGO */
     #catalogContainer {
         counter-reset: page 0;
         padding: 0 !important;
@@ -512,13 +530,14 @@ body {
         flex-direction: column !important;
     }
 
+    /* BLOQUE DE PÁGINA INDIVIDUAL */
     .page-block {
         page-break-inside: avoid !important;
         break-inside: avoid-page !important;
         page-break-after: always !important;
         break-after: page !important;
         width: 100% !important;
-        height: calc(100vh - 12px) !important; /* Ajuste proporcional según márgenes de 6px */
+        height: 265mm !important; /* Mismo alto estándar en milímetros */
         margin: 0 !important;
         padding: 0 !important;
         box-sizing: border-box !important;
@@ -526,8 +545,12 @@ body {
         overflow: hidden !important;
     }
 
-    .page-block:last-child { page-break-after: auto !important; break-after: auto !important; }
+    .page-block:last-child { 
+        page-break-after: auto !important; 
+        break-after: auto !important; 
+    }
 
+    /* GRILLA Y TARJETAS EN IMPRESIÓN */
     .products-grid {
         display: grid !important;
         grid-template-columns: repeat(3, 1fr) !important;
@@ -549,15 +572,15 @@ body {
         display: flex !important;
         flex-direction: column !important;
         justify-content: space-between !important;
-        height: 100% !important; /* Tarjetas proporcionales que llenan la cuadrícula de forma uniforme */
+        height: 100% !important;
         box-sizing: border-box !important;
     }
 
     .product-img-box {
-        flex: 1 !important; /* Se ajusta proporcionalmente al alto disponible */
+        flex: 1 !important;
         width: 100% !important;
         min-height: 0 !important;
-        max-height: 130px !important;
+        max-height: 125px !important;
         background-color: #ffffff !important;
         margin-bottom: 4px !important;
         display: flex !important;
