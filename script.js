@@ -2,7 +2,7 @@
 // CONFIGURACIÓN DE FUENTES DE DATOS E IMÁGENES
 // =========================================================================
 
-// 1. Pega aquí el enlace de tu CSV publicado desde Google Sheets
+// 1. Enlace del CSV publicado desde Google Sheets
 const GOOGLE_SHEETS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQf6lHp7YR9F2iYzaTexYRHm1lyxJwblAj95GAQ-ekPfkPlGqqgUxM-S1yyeAnHuW9ZZXwBPIOi2TI_/pub?gid=412358378&single=true&output=csv";
 
 // 2. Configuración de Supabase Storage para imágenes de productos
@@ -15,13 +15,10 @@ const PLACEHOLDER_SVG = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2
 
 // Variables globales del catálogo
 let rawProductsData = [];
-let customImages = {}; 
-let companyLogoBase64 = ''; 
-let qrLogoBase64 = ''; 
-let editModeActive = false;
+let lastScrollY = window.scrollY;
 
 // =========================================================================
-// CARGA INICIAL DE DATOS
+// CARGA INICIAL DE DATOS Y EVENTOS
 // =========================================================================
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -33,7 +30,6 @@ document.addEventListener("DOMContentLoaded", () => {
         .then(text => parseCSV(text))
         .catch(err => {
             console.error("Error al cargar el catálogo:", err);
-            // Si falla la red o la URL no está disponible, intenta buscar el archivo local de respaldo
             fetch("catalogo_productos.csv")
                 .then(res => {
                     if (!res.ok) throw new Error("No hay copia local disponible");
@@ -42,10 +38,33 @@ document.addEventListener("DOMContentLoaded", () => {
                 .then(text => parseCSV(text))
                 .catch(() => renderEmptyMessage());
         });
+
+    window.addEventListener("scroll", handleMobileScroll, { passive: true });
 });
 
+function handleMobileScroll() {
+    if (window.innerWidth > 768) return;
+
+    const currentScrollY = window.scrollY;
+    const topBar = document.getElementById("topBar");
+    const secondaryBar = document.getElementById("secondaryBar");
+    const whatsappBtn = document.getElementById("whatsappBtn");
+
+    if (currentScrollY > lastScrollY && currentScrollY > 60) {
+        if (topBar) topBar.classList.add("scroll-hidden-top");
+        if (secondaryBar) secondaryBar.classList.add("scroll-hidden-top");
+        if (whatsappBtn) whatsappBtn.classList.add("scroll-hidden-bottom");
+    } else {
+        if (topBar) topBar.classList.remove("scroll-hidden-top");
+        if (secondaryBar) secondaryBar.classList.remove("scroll-hidden-top");
+        if (whatsappBtn) whatsappBtn.classList.remove("scroll-hidden-bottom");
+    }
+
+    lastScrollY = currentScrollY;
+}
+
 // =========================================================================
-// INTERFAZ Y MODALES
+// INTERFAZ Y NAVEGACIÓN
 // =========================================================================
 
 function toggleMainMenu() {
@@ -53,132 +72,16 @@ function toggleMainMenu() {
     if (menu) menu.classList.toggle('active');
 }
 
-function toggleMobileSearch() {
-    const sidebar = document.getElementById('sidebarMenu');
-    if (sidebar) sidebar.classList.toggle('mobile-visible');
-}
-
 function toggleCompanyCoverMobile() {
     const cover = document.getElementById('pdfCoverSection');
     if (cover) cover.classList.toggle('mobile-visible');
 }
 
-function toggleEditModeMobile() {
-    editModeActive = !editModeActive;
-    const btn = document.getElementById('editModeBtnMobile');
-    if (btn) {
-        btn.textContent = `MODO EDICIÓN: ${editModeActive ? 'ACTIVADO' : 'DESACTIVADO'}`;
-        btn.style.backgroundColor = editModeActive ? '#16a34a' : '#3b82f6';
-    }
-}
-
-function openModal() {
-    document.getElementById('adminModal').style.display = 'flex';
-}
-
-function closeModal() {
-    document.getElementById('adminModal').style.display = 'none';
-}
-
-/* Compartir por WhatsApp */
 function shareCatalogWhatsApp(event) {
     event.preventDefault();
     const currentUrl = encodeURIComponent(window.location.href);
     const message = encodeURIComponent(`Hola, te comparto el catálogo digital de productos: ${decodeURIComponent(currentUrl)}`);
     window.open(`https://api.whatsapp.com/send?text=${message}`, '_blank');
-}
-
-/* Personalización visual de portada */
-function changeCoverBgColor(color) {
-    const cover = document.getElementById('pdfCoverSection');
-    if (cover) cover.style.backgroundColor = color;
-}
-
-function changeCoverTextColor(color) {
-    const cover = document.getElementById('pdfCoverSection');
-    if (cover) cover.style.color = color;
-}
-
-// =========================================================================
-// EXPORTACIÓN Y LOGOS
-// =========================================================================
-
-function exportCSV() {
-    if (rawProductsData.length === 0) {
-        alert("No hay datos cargados para exportar.");
-        return;
-    }
-
-    let csvContent = "data:text/csv;charset=utf-8,CODIGO;CATEGORIA;MARCA;NOMBRE;PRESENTACION;PRECIO;URL\n";
-    rawProductsData.forEach(p => {
-        csvContent += `"${p.code}";"${p.category}";"${p.brand}";"${p.name}";"${p.presentation}";"${p.priceString}";"${p.customUrl || ''}"\n`;
-    });
-
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "catalogo_productos.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-}
-
-function exportEncodedImages() {
-    if (Object.keys(customImages).length === 0) {
-        alert("No hay imágenes codificadas personalizadas cargadas.");
-        return;
-    }
-
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(customImages));
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute("download", "imagenes_codificadas.json");
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
-}
-
-function handleCompanyLogoUpload(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        companyLogoBase64 = e.target.result;
-        const logoImg = document.getElementById('companyLogoImg');
-        if (logoImg) {
-            logoImg.src = companyLogoBase64;
-            logoImg.style.display = 'block';
-        }
-    };
-    reader.readAsDataURL(file);
-}
-
-function handleQRLogoUpload(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        qrLogoBase64 = e.target.result;
-        const qrImg = document.getElementById('qrLogoImg');
-        if (qrImg) {
-            qrImg.src = qrLogoBase64;
-            qrImg.style.display = 'block';
-        }
-    };
-    reader.readAsDataURL(file);
-}
-
-function handleCSVFile(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        parseCSV(e.target.result);
-    };
-    reader.readAsText(file);
 }
 
 // =========================================================================
@@ -189,6 +92,7 @@ function parseCSV(text) {
     const lines = text.split(/\r\n|\n/);
     rawProductsData = [];
     const categoriesSet = new Set();
+    const brandsSet = new Set();
 
     if (lines.length < 2) {
         renderEmptyMessage();
@@ -232,12 +136,13 @@ function parseCSV(text) {
                 customUrl
             });
             categoriesSet.add(category);
+            if (brand) brandsSet.add(brand);
         }
     }
 
     populateCategorySelect(Array.from(categoriesSet));
-    renderCatalog(rawProductsData);
-    closeModal();
+    populateBrandSelect(Array.from(brandsSet));
+    filterProducts();
 }
 
 function formatExactPrice(valStr) {
@@ -257,15 +162,39 @@ function formatExactPrice(valStr) {
 }
 
 function populateCategorySelect(categories) {
-    const select = document.getElementById('categorySelect');
-    if (!select) return;
+    const selects = [
+        document.getElementById('categorySelect'),
+        document.getElementById('mobileCategorySelect')
+    ];
     
-    select.innerHTML = '<option value="all">Todas las categorías</option>';
-    categories.forEach(cat => {
-        const option = document.createElement('option');
-        option.value = cat;
-        option.textContent = cat;
-        select.appendChild(option);
+    selects.forEach(select => {
+        if (!select) return;
+        select.innerHTML = '<option value="all">Todas las categorías</option>';
+        categories.sort().forEach(cat => {
+            const option = document.createElement('option');
+            option.value = cat;
+            option.textContent = cat;
+            select.appendChild(option);
+        });
+    });
+}
+
+function populateBrandSelect(brands, selectedValue = 'all') {
+    const selects = [
+        document.getElementById('brandSelect'),
+        document.getElementById('mobileBrandSelect')
+    ];
+    
+    selects.forEach(select => {
+        if (!select) return;
+        select.innerHTML = '<option value="all">Todas las marcas</option>';
+        brands.sort().forEach(b => {
+            const option = document.createElement('option');
+            option.value = b;
+            option.textContent = b;
+            if (b === selectedValue) option.selected = true;
+            select.appendChild(option);
+        });
     });
 }
 
@@ -274,15 +203,9 @@ function populateCategorySelect(categories) {
 // =========================================================================
 
 function getProductImageUrl(prod) {
-    // 1. Imagen subida manualmente en el navegador
-    if (customImages[prod.code]) return customImages[prod.code];
-
-    // 2. Enlace explícito indicado en la columna del CSV (URL)
     if (prod.customUrl && prod.customUrl.trim() !== '') {
         return prod.customUrl.trim();
     }
-
-    // 3. Apunta por defecto al archivo en Supabase Storage
     return `${SUPABASE_STORAGE_URL}${prod.code}.webp`;
 }
 
@@ -297,96 +220,52 @@ function renderCatalog(products) {
         return;
     }
 
-    const grouped = {};
-    products.forEach(p => {
-        if (!grouped[p.category]) grouped[p.category] = [];
-        grouped[p.category].push(p);
-    });
+    const pageSize = 12; 
+    for (let i = 0; i < products.length; i += pageSize) {
+        const pageItems = products.slice(i, i + pageSize);
 
-    for (const [category, items] of Object.entries(grouped)) {
-        const pageSize = 12; // Formato 3x4 por página para impresión PDF
-        for (let i = 0; i < items.length; i += pageSize) {
-            const pageItems = items.slice(i, i + pageSize);
+        const pageBlock = document.createElement('div');
+        pageBlock.className = 'page-block category-group';
 
-            const pageBlock = document.createElement('div');
-            pageBlock.className = 'page-block category-group';
+        let html = `<div class="products-grid">`;
 
-            let html = `
-                <aside class="category-sidebar">
-                    <span class="category-title-text">${category}</span>
-                </aside>
-                <div class="products-grid">
-            `;
+        pageItems.forEach((prod) => {
+            const imageSrc = getProductImageUrl(prod);
 
-            pageItems.forEach((prod) => {
-                const imageSrc = getProductImageUrl(prod);
-
-                html += `
-                    <div class="product-card" onclick="triggerImageUpload('${prod.code}')">
-                        <input type="file" id="file-${prod.code}" accept="image/*" style="display:none;" onchange="uploadProductImage(event, '${prod.code}')">
-                        <div class="product-img-box">
-                            <img id="img-${prod.code}" 
-                                 src="${imageSrc}" 
-                                 loading="lazy"
-                                 onerror="handleImageError(this, '${prod.code}')" 
-                                 alt="${prod.name}">
-                        </div>
-                        <div class="product-info">
-                            <span class="product-brand">${prod.brand}</span>
-                            <div class="product-name" title="${prod.name}">${prod.name}</div>
-                            <span class="product-package">${prod.presentation}</span>
-                            <div class="product-price-tag">$${prod.priceString}</div>
-                        </div>
+            html += `
+                <div class="product-card">
+                    <div class="product-img-box">
+                        <img id="img-${prod.code}" 
+                             src="${imageSrc}" 
+                             loading="lazy"
+                             onerror="handleImageError(this, '${prod.code}')" 
+                             alt="${prod.name}">
                     </div>
-                `;
-            });
+                    <div class="product-info">
+                        <span class="product-brand">${prod.brand}</span>
+                        <div class="product-name" title="${prod.name}">${prod.name}</div>
+                        <span class="product-package">${prod.presentation}</span>
+                        <div class="product-price-tag">$${prod.priceString}</div>
+                    </div>
+                </div>
+            `;
+        });
 
-            html += `</div>`;
-            pageBlock.innerHTML = html;
-            container.appendChild(pageBlock);
-        }
+        html += `</div>`;
+        pageBlock.innerHTML = html;
+        container.appendChild(pageBlock);
     }
 }
 
-// Control de carga de imagen con reintento controlado (máximo 1 reintento para prevenir bucles)
 function handleImageError(imgElem, code) {
     const attempt = imgElem.dataset.attempt || "0";
 
     if (attempt === "0" && !imgElem.src.includes('data:image')) {
-        // Si falló el formato predeterminado .webp, prueba con .png
         imgElem.dataset.attempt = "1";
         imgElem.src = `${SUPABASE_STORAGE_URL}${code}.png`;
     } else {
-        // Si vuelve a fallar, corta las peticiones y asigna el marcador SVG
         imgElem.onerror = null;
         imgElem.src = PLACEHOLDER_SVG;
-    }
-}
-
-function triggerImageUpload(code) {
-    if (window.innerWidth <= 768 && !editModeActive) {
-        return;
-    }
-    const input = document.getElementById(`file-${code}`);
-    if (input) input.click();
-}
-
-function uploadProductImage(event, code) {
-    event.stopPropagation();
-    const file = event.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const base64Img = e.target.result;
-            customImages[code] = base64Img;
-            const imgElem = document.getElementById(`img-${code}`);
-            if (imgElem) {
-                imgElem.onerror = null;
-                imgElem.src = base64Img;
-            }
-            filterProducts();
-        };
-        reader.readAsDataURL(file);
     }
 }
 
@@ -396,30 +275,124 @@ function renderEmptyMessage() {
     container.innerHTML = `
         <div style="text-align:center; padding: 40px; background: #fff; border-radius: 8px; border: 1px dashed #cbd5e1;">
             <p style="color:#64748b; font-weight: 600;">No hay productos cargados.</p>
-            <p style="color:#94a3b8; font-size: 0.85em; margin-top: 6px;">Verifica el enlace publicado de Google Sheets o usa el menú <strong>DATOS</strong> para subir un archivo CSV.</p>
+            <p style="color:#94a3b8; font-size: 0.85em; margin-top: 6px;">Verifica los filtros aplicados o la fuente de datos.</p>
         </div>
     `;
 }
 
 // =========================================================================
-// FILTROS, BÚSQUEDA Y ORDENAMIENTO
+// FILTROS, BÚSQUEDA Y SINCRONIZACIÓN MÓVIL / ESCRITORIO
 // =========================================================================
 
+function syncAndFilter(type, value) {
+    if (type === 'category') {
+        const sideCat = document.getElementById('categorySelect');
+        const mobileCat = document.getElementById('mobileCategorySelect');
+        if (sideCat && sideCat.value !== value) sideCat.value = value;
+        if (mobileCat && mobileCat.value !== value) mobileCat.value = value;
+
+        updateBrandsBySelectedCategory(value);
+
+    } else if (type === 'brand') {
+        const sideBrand = document.getElementById('brandSelect');
+        const mobileBrand = document.getElementById('mobileBrandSelect');
+        if (sideBrand && sideBrand.value !== value) sideBrand.value = value;
+        if (mobileBrand && mobileBrand.value !== value) mobileBrand.value = value;
+
+    } else if (type === 'sort') {
+        const sideSort = document.getElementById('sortSelect');
+        const mobileSort = document.getElementById('mobileSortSelect');
+        if (sideSort && sideSort.value !== value) sideSort.value = value;
+        if (mobileSort && mobileSort.value !== value) mobileSort.value = value;
+    }
+
+    filterProducts();
+}
+
+function updateBrandsBySelectedCategory(selectedCategory) {
+    let availableBrands;
+    if (selectedCategory === 'all') {
+        availableBrands = Array.from(new Set(rawProductsData.map(p => p.brand).filter(Boolean)));
+    } else {
+        availableBrands = Array.from(new Set(
+            rawProductsData
+                .filter(p => p.category === selectedCategory)
+                .map(p => p.brand)
+                .filter(Boolean)
+        ));
+    }
+
+    const currentBrandSelect = document.getElementById('brandSelect');
+    const currentBrandVal = currentBrandSelect ? currentBrandSelect.value : 'all';
+    
+    const newSelectedVal = availableBrands.includes(currentBrandVal) ? currentBrandVal : 'all';
+    
+    populateBrandSelect(availableBrands, newSelectedVal);
+}
+
 function filterProducts() {
-    const searchVal = document.getElementById('searchInput').value.toLowerCase();
-    const selectedCat = document.getElementById('categorySelect').value;
-    const sortVal = document.getElementById('sortSelect').value;
+    const topSearch = document.getElementById('topSearchInput');
+    const searchVal = topSearch ? topSearch.value.toLowerCase() : '';
+
+    const sideCat = document.getElementById('categorySelect');
+    const selectedCat = sideCat ? sideCat.value : 'all';
+
+    const sideBrand = document.getElementById('brandSelect');
+    const selectedBrand = sideBrand ? sideBrand.value : 'all';
+
+    const sideSort = document.getElementById('sortSelect');
+    const sortVal = sideSort ? sideSort.value : 'default';
 
     let filtered = rawProductsData.filter(p => {
         const matchSearch = p.name.toLowerCase().includes(searchVal) || 
                             p.code.toLowerCase().includes(searchVal) || 
                             p.brand.toLowerCase().includes(searchVal);
         const matchCat = (selectedCat === 'all' || p.category === selectedCat);
-        return matchSearch && matchCat;
+        const matchBrand = (selectedBrand === 'all' || p.brand === selectedBrand);
+        return matchSearch && matchCat && matchBrand;
     });
 
+    // LÓGICA DE LA FRANJA DINÁMICA
+    const stripElem = document.getElementById('stripActiveCategory');
+    if (stripElem) {
+        if (filtered.length === 0) {
+            stripElem.textContent = 'SIN RESULTADOS';
+        } else if (selectedBrand !== 'all') {
+            if (selectedCat !== 'all') {
+                stripElem.textContent = `${selectedCat}: ${selectedBrand} (${filtered.length} PRODUCTOS)`;
+            } else {
+                stripElem.textContent = `${selectedBrand} (${filtered.length} PRODUCTOS)`;
+            }
+        } else if (selectedCat !== 'all') {
+            const brandsInCat = Array.from(new Set(filtered.map(p => p.brand).filter(Boolean)));
+            if (brandsInCat.length === 1) {
+                stripElem.textContent = `${selectedCat}: ${brandsInCat[0]} (${filtered.length} PRODUCTOS)`;
+            } else {
+                stripElem.textContent = `${selectedCat} (${filtered.length} PRODUCTOS, ${brandsInCat.length} MARCAS)`;
+            }
+        } else {
+            const categoriesMap = {};
+            filtered.forEach(p => {
+                if (!categoriesMap[p.category]) categoriesMap[p.category] = new Set();
+                if (p.brand) categoriesMap[p.category].add(p.brand);
+            });
+
+            const catSummaries = Object.entries(categoriesMap).map(([catName, brandSet]) => {
+                const brandCount = brandSet.size;
+                return `${catName} (${brandCount} ${brandCount === 1 ? 'MARCA' : 'MARCAS'})`;
+            });
+
+            stripElem.textContent = catSummaries.join(', ');
+        }
+    }
+
+    // Ordenamiento
     filtered.sort((a, b) => {
         switch (sortVal) {
+            case 'default':
+                const catCompare = a.category.localeCompare(b.category);
+                if (catCompare !== 0) return catCompare;
+                return a.brand.localeCompare(b.brand);
             case 'name-asc':
                 return a.name.localeCompare(b.name);
             case 'name-desc':
@@ -442,19 +415,4 @@ function filterProducts() {
     });
 
     renderCatalog(filtered);
-}
-
-function setColumns(cols) {
-    const container = document.getElementById('catalogContainer');
-    if (!container) return;
-    
-    container.className = `cols-${cols}`;
-
-    const btn2 = document.getElementById('btn2col');
-    const btn4 = document.getElementById('btn4col');
-
-    if (btn2 && btn4) {
-        btn2.classList.toggle('active', cols === 2);
-        btn4.classList.toggle('active', cols === 4);
-    }
 }
