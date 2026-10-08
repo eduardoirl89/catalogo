@@ -3,75 +3,143 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Catálogo de Productos</title>
+    <title>Catálogo Web de Productos</title>
     <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
 
-    <!-- Encabezado / Buscador -->
-    <header class="header">
-        <div class="header-container">
-            <div class="logo">
-                <i class="fas fa-boxes-stacked"></i>
-                <h2>Mi Catálogo</h2>
-            </div>
-            
-            <div class="search-box">
-                <i class="fas fa-search search-icon"></i>
-                <input type="text" id="searchInput" placeholder="Buscar por código, nombre o categoría...">
-                <button id="clearSearch" class="clear-btn" style="display: none;">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-
-            <div class="header-actions">
-                <span id="productCount" class="badge">0 Productos</span>
-            </div>
+    <!-- TOP BAR (BARRA SUPERIOR DE NAVEGACIÓN) -->
+    <header class="top-bar" id="topBar">
+        <div class="top-bar-left">
+            <div class="user-session-info" id="sessionLabel">Invitado / Sin Empresa</div>
         </div>
+
+        <!-- BARRA DE BÚSQUEDA INTEGRADA EN EL TOP-BAR -->
+        <div class="top-search-box">
+            <input type="text" id="topSearchInput" placeholder="Buscar producto..." oninput="syncAndFilter('search', this.value)">
+        </div>
+        
+        <!-- BOTÓN HAMBURGUESA GENERAL -->
+        <button class="hamburger-btn" onclick="toggleMainMenu()" aria-label="Menú">☰</button>
+
+        <!-- MENÚ DESPLEGABLE PRINCIPAL DE OPCIONES -->
+        <nav class="main-dropdown-menu" id="mainDropdownMenu">
+            <button class="btn-company-option mobile-only-btn" onclick="toggleCompanyCoverMobile()">EMPRESA</button>
+            <button class="btn-pdf" onclick="window.print()">EXPORTAR PDF</button>
+        </nav>
     </header>
 
-    <!-- Contenido Principal -->
-    <main class="main-container">
-        <!-- Filtros Lateral/Superior -->
-        <aside class="filters-sidebar">
-            <h3>Categorías</h3>
-            <ul id="categoriesList" class="categories-list">
-                <li class="active" data-category="all">
-                    <span>Todas</span>
-                    <span class="count-pill" id="count-all">0</span>
-                </li>
-                <!-- Se puebla dinámicamente -->
-            </ul>
-        </aside>
-
-        <!-- Rejilla de Productos -->
-        <section class="products-section">
-            <div id="productsGrid" class="products-grid">
-                <!-- Se puebla dinámicamente con JS -->
-            </div>
-            <div id="noResults" class="no-results" style="display: none;">
-                <i class="fas fa-search-minus fa-3x"></i>
-                <p>No se encontraron productos que coincidan con la búsqueda.</p>
-            </div>
-        </section>
-    </main>
-
-    <!-- Modal para Detalle de Imagen/Producto -->
-    <div id="imageModal" class="modal">
-        <span class="close-modal" id="closeModal">&times;</span>
-        <div class="modal-content-wrapper">
-            <div id="modalImageContainer" class="modal-img-container">
-                <!-- Imagen renderizada dinámicamente con <picture> -->
-            </div>
-            <div class="modal-info">
-                <h3 id="modalTitle"></h3>
-                <p id="modalCode" class="modal-code"></p>
-                <p id="modalCategory" class="modal-category"></p>
-                <p id="modalPrice" class="modal-price"></p>
-            </div>
+    <!-- BARRA SECUNDARIA RESPONSIVE (SOLO MÓVIL) -->
+    <div class="secondary-bar" id="secondaryBar">
+        <div class="secondary-filter-item">
+            <select id="mobileCategorySelect" onchange="syncAndFilter('category', this.value)">
+                <option value="all">Todas las categorías</option>
+            </select>
+        </div>
+        <div class="secondary-filter-item">
+            <select id="mobileBrandSelect" onchange="syncAndFilter('brand', this.value)">
+                <option value="all">Todas las marcas</option>
+            </select>
+        </div>
+        <div class="secondary-filter-item">
+            <select id="mobileSortSelect" onchange="syncAndFilter('sort', this.value)">
+                <option value="default">Por defecto</option>
+                <option value="name-asc">Nombre (A - Z)</option>
+                <option value="name-desc">Nombre (Z - A)</option>
+                <option value="price-asc">Precio: Menor a Mayor</option>
+                <option value="price-desc">Precio: Mayor a Menor</option>
+                <option value="category-asc">Categoría (A - Z)</option>
+                <option value="category-desc">Categoría (Z - A)</option>
+                <option value="brand-asc">Marca (A - Z)</option>
+                <option value="brand-desc">Marca (Z - A)</option>
+            </select>
         </div>
     </div>
+
+    <!-- LAYOUT PRINCIPAL -->
+    <div class="main-layout">
+        
+        <!-- SIDEBAR DE FILTROS Y ORDENAMIENTO (ESCRITORIO) -->
+        <aside class="sidebar-filters" id="sidebarMenu">
+            <div class="sidebar-header">
+                <h3>Filtros</h3>
+            </div>
+
+            <div class="filter-group">
+                <label for="categorySelect">Categoría</label>
+                <select id="categorySelect" onchange="syncAndFilter('category', this.value)">
+                    <option value="all">Todas las categorías</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label for="brandSelect">Marca</label>
+                <select id="brandSelect" onchange="syncAndFilter('brand', this.value)">
+                    <option value="all">Todas las marcas</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label for="sortSelect">Ordenar por</label>
+                <select id="sortSelect" onchange="syncAndFilter('sort', this.value)">
+                    <option value="default">Por defecto (Categoría A-Z, Marca A-Z)</option>
+                    <option value="name-asc">Nombre (A - Z)</option>
+                    <option value="name-desc">Nombre (Z - A)</option>
+                    <option value="price-asc">Precio: Menor a Mayor</option>
+                    <option value="price-desc">Precio: Mayor a Menor</option>
+                    <option value="category-asc">Categoría (A - Z)</option>
+                    <option value="category-desc">Categoría (Z - A)</option>
+                    <option value="brand-asc">Marca (A - Z)</option>
+                    <option value="brand-desc">Marca (Z - A)</option>
+                </select>
+            </div>
+        </aside>
+
+        <!-- ÁREA DE CONTENIDO -->
+        <main class="content-area">
+            
+            <!-- PORTADA / MEMBRETE DE EMPRESA -->
+            <section class="pdf-cover" id="pdfCoverSection">
+                <div class="cover-header">
+                    <span class="company-name" contenteditable="true">MI EMPRESA C.A.</span>
+                    <span class="cover-title-inline" contenteditable="true">CATÁLOGO DE PRODUCTOS</span>
+                    <span class="cover-rif" contenteditable="true">RIF: J-00000000-0</span>
+                </div>
+                
+                <div class="cover-body">
+                    <div class="cover-top-half">
+                        <img id="companyLogoImg" class="company-logo-img" src="" alt="Logo Empresa" style="display:none;">
+                    </div>
+
+                    <div class="cover-bottom-half">
+                        <img id="qrLogoImg" class="qr-logo-img" src="" alt="Código QR" style="display:none;">
+                    </div>
+                </div>
+                
+                <div class="cover-footer">
+                    <span contenteditable="true">RIF: J-00000000-0</span>
+                    <span contenteditable="true">Contacto: +58 000 0000000</span>
+                    <span contenteditable="true">Redes: @miempresa</span>
+                    <span contenteditable="true">Dirección: Ciudad Bolívar, Venezuela</span>
+                    <span contenteditable="true">Fecha: SEPTIEMBRE 2026</span>
+                </div>
+            </section>
+
+            <!-- FRANJA HORIZONTAL DINÁMICA -->
+            <div class="category-brand-strip" id="categoryBrandStrip">
+                <span class="strip-value" id="stripActiveCategory">CARGANDO...</span>
+            </div>
+
+            <!-- CONTENEDOR DINÁMICO DE PRODUCTOS -->
+            <div id="catalogContainer" class="cols-4"></div>
+
+        </main>
+    </div>
+
+    <!-- BOTÓN FLOTANTE DE WHATSAPP -->
+    <a href="#" class="whatsapp-float-btn" id="whatsappBtn" onclick="shareCatalogWhatsApp(event)" title="Compartir por WhatsApp">
+        🟢 WhatsApp
+    </a>
 
     <script src="script.js"></script>
 </body>
