@@ -22,7 +22,10 @@ const INCLUDE_COVER_ON_PRINT = CONFIG.INCLUDE_COVER_ON_PRINT !== false;
 const SEARCH_DEBOUNCE_MS = CONFIG.SEARCH_DEBOUNCE_MS || 200;
 const ENABLE_DEBUG_LOGS = CONFIG.ENABLE_DEBUG_LOGS !== false;
 const WHATSAPP_NUMBER = CONFIG.WHATSAPP_NUMBER || "";
-const WHATSAPP_MESSAGE = CONFIG.WHATSAPP_MESSAGE || "Hola, te comparto el catálogo digital de productos:";
+
+// Mensajes pre-cargados
+const WHATSAPP_MESSAGE_TO_COMPANY = CONFIG.WHATSAPP_MESSAGE_TO_COMPANY || "Hola, quisiera más información sobre el catálogo de productos.";
+const WHATSAPP_MESSAGE_SHARE = CONFIG.WHATSAPP_MESSAGE_SHARE || "Hola, te comparto el catálogo digital de productos:";
 
 const UNKNOWN_BRAND_LABEL = "SIN MARCA";
 
@@ -78,6 +81,40 @@ function resetPrintState() {
 }
 
 // =========================================================================
+// MODO OSCURO
+// =========================================================================
+
+const THEME_KEY = "catalogo-theme";
+
+function getPreferredTheme() {
+    // 1. Preferencia guardada
+    try {
+        const stored = localStorage.getItem(THEME_KEY);
+        if (stored === "light" || stored === "dark") return stored;
+    } catch (e) { /* localStorage bloqueado */ }
+
+    // 2. Preferencia del sistema
+    if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+        return "dark";
+    }
+    return "light";
+}
+
+function applyTheme(theme) {
+    document.documentElement.setAttribute("data-theme", theme);
+    try { localStorage.setItem(THEME_KEY, theme); } catch (e) { /* ignorar */ }
+}
+
+function toggleTheme() {
+    const current = document.documentElement.getAttribute("data-theme") || "light";
+    const next = current === "dark" ? "light" : "dark";
+    applyTheme(next);
+}
+
+// Aplicar tema al cargar (antes del DOMContentLoaded si es posible)
+applyTheme(getPreferredTheme());
+
+// =========================================================================
 // CARGA INICIAL
 // =========================================================================
 
@@ -104,11 +141,13 @@ document.addEventListener("DOMContentLoaded", () => {
             document.querySelectorAll(".multifilter-menu.active").forEach(m => m.classList.remove("active"));
             document.querySelectorAll(".multifilter-btn.active").forEach(b => b.classList.remove("active"));
         }
+        if (!e.target.closest("#whatsappFloatContainer")) {
+            closeWhatsAppOptions();
+        }
     });
 
     window.addEventListener("scroll", handleMobileScroll, { passive: true });
 
-    // Restaurar estado al terminar la impresión
     window.addEventListener("afterprint", resetPrintState);
     if (window.matchMedia) {
         const mql = window.matchMedia("print");
@@ -155,14 +194,14 @@ function handleMobileScroll() {
 
     const currentScrollY = window.scrollY;
     const topBar = document.getElementById("topBar");
-    const whatsappBtn = document.getElementById("whatsappBtn");
+    const whatsappContainer = document.getElementById("whatsappFloatContainer");
 
     if (currentScrollY > lastScrollY && currentScrollY > 80) {
         if (topBar) topBar.classList.add("scroll-hidden-top");
-        if (whatsappBtn) whatsappBtn.classList.add("scroll-hidden-bottom");
+        if (whatsappContainer) whatsappContainer.classList.add("scroll-hidden-bottom");
     } else {
         if (topBar) topBar.classList.remove("scroll-hidden-top");
-        if (whatsappBtn) whatsappBtn.classList.remove("scroll-hidden-bottom");
+        if (whatsappContainer) whatsappContainer.classList.remove("scroll-hidden-bottom");
     }
 
     lastScrollY = currentScrollY;
@@ -397,16 +436,56 @@ function toggleMainMenu() {
     if (btn) btn.setAttribute("aria-expanded", String(isActive));
 }
 
+// =========================================================================
+// WHATSAPP - ACCIONES
+// =========================================================================
+
+function toggleWhatsAppOptions(event) {
+    if (event) event.stopPropagation();
+    const options = document.getElementById("whatsappFloatOptions");
+    const btn = document.getElementById("whatsappBtn");
+    if (!options || !btn) return;
+
+    const isActive = options.classList.toggle("active");
+    btn.classList.toggle("active", isActive);
+    btn.setAttribute("aria-expanded", String(isActive));
+}
+
+function closeWhatsAppOptions() {
+    const options = document.getElementById("whatsappFloatOptions");
+    const btn = document.getElementById("whatsappBtn");
+    if (options) options.classList.remove("active");
+    if (btn) {
+        btn.classList.remove("active");
+        btn.setAttribute("aria-expanded", "false");
+    }
+}
+
+function openWhatsAppChatToCompany(event) {
+    if (event) event.preventDefault();
+
+    if (!WHATSAPP_NUMBER || WHATSAPP_NUMBER.trim() === "") {
+        alert("El número de WhatsApp de la empresa no está configurado.");
+        return;
+    }
+
+    const msg = WHATSAPP_MESSAGE_TO_COMPANY;
+    const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
+    window.open(url, "_blank");
+
+    closeWhatsAppOptions();
+}
+
 function shareCatalogWhatsApp(event) {
     if (event) event.preventDefault();
+    event.stopPropagation();
+
     const currentUrl = window.location.href;
-    if (WHATSAPP_NUMBER && WHATSAPP_NUMBER.trim() !== "") {
-        const msg = `${WHATSAPP_MESSAGE} ${currentUrl}`;
-        window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`, "_blank");
-    } else {
-        const msg = `${WHATSAPP_MESSAGE} ${currentUrl}`;
-        window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, "_blank");
-    }
+    const msg = `${WHATSAPP_MESSAGE_SHARE} ${currentUrl}`;
+    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
+    window.open(url, "_blank");
+
+    closeWhatsAppOptions();
 }
 
 // =========================================================================
@@ -619,7 +698,7 @@ function clearAllFilters() {
 }
 
 // =========================================================================
-// PREPARACIÓN DE PDF — FLUJO CONTINUO SIN PAGINACIÓN
+// PREPARACIÓN DE PDF
 // =========================================================================
 
 function prepareAndPrint() {
@@ -631,7 +710,6 @@ function prepareAndPrint() {
 
     if (!INCLUDE_COVER_ON_PRINT) document.body.classList.add("no-print-cover");
 
-    // Salvaguarda: si algo falla, liberar el botón después de 60s
     if (printResetTimer) clearTimeout(printResetTimer);
     printResetTimer = setTimeout(resetPrintState, 60000);
 
@@ -648,8 +726,6 @@ function prepareAndPrint() {
         if (overlay) overlay.classList.remove("active");
         setTimeout(() => {
             window.print();
-            // No liberamos isPrinting aquí; lo hace afterprint o matchMedia.
-            // Como red de seguridad, si en 2s no se libera, lo hacemos nosotros.
             setTimeout(() => {
                 if (isPrinting) resetPrintState();
             }, 2000);
