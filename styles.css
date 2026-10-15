@@ -46,9 +46,7 @@ body {
     border: 0 !important;
 }
 
-/* =========================================================================
-   HEADER
-   ========================================================================= */
+/* HEADER */
 .app-header {
     display: flex;
     align-items: center;
@@ -257,9 +255,7 @@ body {
 
 .btn-pdf { background: var(--color-accent) !important; border: none !important; color: #ffffff !important; }
 
-/* =========================================================================
-   FILTROS (desktop)
-   ========================================================================= */
+/* FILTROS */
 .filter-bar {
     background-color: var(--color-surface);
     border-bottom: 1px solid var(--color-border);
@@ -512,9 +508,7 @@ body {
     border-color: #fecaca;
 }
 
-/* =========================================================================
-   MODAL DE FILTROS
-   ========================================================================= */
+/* MODAL FILTROS */
 .filters-modal-overlay {
     display: none;
     position: fixed;
@@ -663,9 +657,7 @@ body {
 
 .filters-modal-btn.btn-primary:hover { background-color: #b45309; }
 
-/* =========================================================================
-   ÁREA DE CONTENIDO
-   ========================================================================= */
+/* CONTENIDO */
 .content-area {
     max-width: 1600px;
     margin: 0 auto;
@@ -689,9 +681,7 @@ body {
 
 .pdf-cover { display: none; }
 
-/* =========================================================================
-   SECCIONES POR MARCA (WEB)
-   ========================================================================= */
+/* SECCIONES POR MARCA */
 .brand-section { margin-bottom: 36px; }
 
 .brand-section-header {
@@ -739,9 +729,7 @@ body {
 .brand-section.is-unknown .brand-section-name::before { background-color: #94a3b8; }
 .brand-section.is-unknown .brand-section-header { border-bottom-color: #e2e8f0; }
 
-/* =========================================================================
-   GRILLA DE PRODUCTOS WEB
-   ========================================================================= */
+/* GRILLA WEB */
 .products-grid {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
@@ -832,9 +820,7 @@ body {
     letter-spacing: -0.3px;
 }
 
-/* =========================================================================
-   WHATSAPP FLOTANTE
-   ========================================================================= */
+/* WHATSAPP */
 .whatsapp-float-btn {
     position: fixed;
     bottom: 24px;
@@ -879,9 +865,7 @@ body {
     pointer-events: none;
 }
 
-/* =========================================================================
-   OVERLAY PDF
-   ========================================================================= */
+/* OVERLAY PDF */
 .pdf-loading-overlay {
     display: none;
     position: fixed;
@@ -927,9 +911,7 @@ body {
     color: var(--color-text-muted);
 }
 
-/* =========================================================================
-   RESPONSIVE
-   ========================================================================= */
+/* RESPONSIVE */
 @media (max-width: 1280px) {
     .products-grid { grid-template-columns: repeat(4, 1fr); }
     .company-name-header { max-width: 180px; }
@@ -943,14 +925,11 @@ body {
     .multifilter, .filter-item-simple { min-width: 140px; }
 }
 
-/* MÓVIL */
 @media (max-width: 768px) {
     :root { --header-height: 60px; }
 
     .app-header { padding: 8px 12px; gap: 10px; }
     .header-company .company-rif-header { display: none; }
-
-    /* Ocultar logo en móvil */
     .company-badge { display: none; }
     .company-name-header { max-width: 130px; font-size: 0.85em; }
 
@@ -961,7 +940,6 @@ body {
         text-overflow: ellipsis;
     }
 
-    /* Móvil: botón filtros + botón PDF visibles, hamburger oculto */
     .btn-filters-header { display: inline-flex; padding: 8px 10px; }
     .btn-filters-header .label { display: none; }
     .btn-pdf-header { display: inline-flex; padding: 8px 10px; }
@@ -969,7 +947,6 @@ body {
     .hamburger-btn { display: none; }
     .main-dropdown-menu { display: none !important; }
 
-    /* Ocultar barra de filtros horizontal en móvil */
     .filter-bar { display: none; }
 
     .filter-chips-wrapper {
@@ -1041,32 +1018,31 @@ body {
         background: #ffffff !important;
         margin: 0 !important;
         padding: 0 !important;
-        width: 215.9mm !important;
+        width: 100% !important;
         height: auto !important;
+        overflow: visible !important;
     }
 
     .content-area {
         background: #ffffff !important;
         padding: 0 !important;
         margin: 0 !important;
-        width: 215.9mm !important;
-        max-width: 215.9mm !important;
+        width: 100% !important;
+        max-width: 100% !important;
         display: block !important;
+        overflow: visible !important;
     }
 
-    /* PORTADA */
+    /* PORTADA — ocupa toda la hoja sin márgenes */
     .pdf-cover, #pdfCoverSection {
-        page-break-before: auto !important;
         page-break-after: always !important;
         break-after: page !important;
-        width: 215.9mm !important;
-        height: 279.4mm !important;
-        min-height: 279.4mm !important;
-        max-height: 279.4mm !important;
+        width: 216mm !important;
+        height: 279mm !important;
+        min-height: 279mm !important;
+        max-height: 279mm !important;
         margin: 0 !important;
         padding: 16mm 14mm !important;
-        border-radius: 0 !important;
-        border: none !important;
         box-sizing: border-box !important;
         display: flex !important;
         flex-direction: column !important;
@@ -1077,6 +1053,7 @@ body {
         text-align: center !important;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
+        overflow: hidden !important;
     }
 
     body.no-print-cover .pdf-cover,
@@ -1131,8 +1108,8 @@ body {
 
     .company-logo-img {
         display: block !important;
-        max-width: 320px !important;
-        max-height: 170px !important;
+        max-width: 280px !important;
+        max-height: 140px !important;
         width: auto !important;
         height: auto !important;
         object-fit: contain !important;
@@ -1140,13 +1117,12 @@ body {
 
     .qr-logo-img {
         display: block !important;
-        max-width: 190px !important;
-        max-height: 190px !important;
+        max-width: 150px !important;
+        max-height: 150px !important;
         width: auto !important;
         height: auto !important;
         object-fit: contain !important;
         background: transparent !important;
-        padding: 0 !important;
     }
 
     .cover-center {
@@ -1154,20 +1130,19 @@ body {
         display: flex !important;
         flex-direction: column !important;
         align-items: center !important;
-        justify-content: center !important;
         gap: 2mm !important;
         padding: 4mm 0 !important;
     }
 
     .company-name {
-        font-size: 1.35em !important;
+        font-size: 1.3em !important;
         font-weight: 800 !important;
         letter-spacing: 1.5px !important;
         text-transform: uppercase !important;
     }
 
     .cover-rif {
-        font-size: 0.95em !important;
+        font-size: 0.9em !important;
         font-weight: 600 !important;
         color: rgba(255,255,255,0.85) !important;
         letter-spacing: 1px !important;
@@ -1178,12 +1153,12 @@ body {
         display: flex !important;
         justify-content: center !important;
         align-items: center !important;
-        padding-top: 2mm !important;
     }
 
     .cover-social a { color: #ffffff !important; text-decoration: none !important; }
+
     .cover-social span {
-        font-size: 0.95em !important;
+        font-size: 0.9em !important;
         font-weight: 600 !important;
         letter-spacing: 1px !important;
         color: #ffffff !important;
@@ -1197,7 +1172,7 @@ body {
         align-items: center !important;
         padding-top: 6mm !important;
         border-top: 1px solid rgba(255,255,255,0.25) !important;
-        font-size: 0.85em !important;
+        font-size: 0.82em !important;
     }
 
     .cover-footer-col {
@@ -1213,69 +1188,38 @@ body {
     .cover-footer-col a { color: #ffffff !important; text-decoration: none !important; }
     .cover-footer-col span { font-weight: 500 !important; color: #ffffff !important; }
 
-    /* =====================================================================
-       CONTENEDOR DE PRODUCTOS
-       ===================================================================== */
+    /* CATÁLOGO — con margen interno propio */
     #catalogContainer {
-        padding: 0 !important;
-        margin: 0 !important;
-        width: 215.9mm !important;
-        display: flex !important;
-        flex-direction: column !important;
-    }
-
-    /* Cada página */
-    .page-block {
-        page-break-inside: avoid !important;
-        break-inside: avoid-page !important;
-        page-break-after: always !important;
-        break-after: page !important;
-        width: 215.9mm !important;
-        height: 279.4mm !important;
-        margin: 0 !important;
         padding: 8mm 6mm !important;
-        box-sizing: border-box !important;
+        margin: 0 !important;
+        width: 100% !important;
+        display: block !important;
+        overflow: visible !important;
+    }
+
+    .brand-section {
+        display: block !important;
+        margin: 0 0 5mm 0 !important;
+        page-break-inside: auto !important;
+        overflow: visible !important;
+    }
+
+    .brand-section-header {
         display: flex !important;
-        flex-direction: column !important;
-        overflow: hidden !important;
-        gap: 4px !important;
-    }
-
-    .page-block:last-child {
-        page-break-after: auto !important;
-        break-after: auto !important;
-    }
-
-    /* Bloque de marca: agrupa divisor + grid juntos */
-    .page-block .print-brand-block {
-        display: flex !important;
-        flex-direction: column !important;
-        margin: 0 0 4px 0 !important;
-        page-break-inside: avoid !important;
-        break-inside: avoid !important;
-    }
-
-    .page-block .print-brand-block:last-child {
-        margin-bottom: 0 !important;
-    }
-
-    /* Divisor de marca: banda delgada */
-    .page-block .brand-divider {
-        display: flex !important;
-        align-items: center !important;
+        align-items: baseline !important;
         justify-content: space-between !important;
-        padding: 2px 4px 3px 4px !important;
-        margin: 0 0 3px 0 !important;
-        border-bottom: 1.5px solid #1e293b !important;
-        flex-shrink: 0 !important;
-        height: 6mm !important;
-        box-sizing: border-box !important;
+        padding: 0 2px 3px 2px !important;
+        margin: 0 0 3mm 0 !important;
+        border-bottom: 2px solid #1e293b !important;
+        page-break-after: avoid !important;
+        break-after: avoid !important;
+        page-break-inside: avoid !important;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
     }
 
-    .page-block .brand-divider-name {
-        font-size: 0.78em !important;
+    .brand-section-name {
+        font-size: 0.85em !important;
         font-weight: 800 !important;
         color: #1e293b !important;
         text-transform: uppercase !important;
@@ -1285,68 +1229,66 @@ body {
         gap: 6px !important;
     }
 
-    .page-block .brand-divider-name::before {
+    .brand-section-name::before {
         content: "" !important;
         display: inline-block !important;
         width: 3px !important;
-        height: 11px !important;
+        height: 12px !important;
         background-color: #d97706 !important;
         border-radius: 2px !important;
     }
 
-    .page-block .brand-divider-count {
-        font-size: 0.62em !important;
+    .brand-section-count {
+        font-size: 0.68em !important;
         font-weight: 600 !important;
         color: #64748b !important;
     }
 
-    /* Grid: 3 columnas, filas de 60mm */
-    .page-block .products-grid {
-        display: grid !important;
-        grid-template-columns: repeat(3, 1fr) !important;
-        gap: 5px !important;
+    .products-grid {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        gap: 3mm !important;
         width: 100% !important;
         padding: 0 !important;
         margin: 0 !important;
-        box-sizing: border-box !important;
-        align-content: start !important;
-        grid-auto-rows: 60mm !important;
-        flex-shrink: 0 !important;
+        overflow: visible !important;
     }
 
-    .page-block .product-card {
+    .product-card {
+        width: calc(33.333% - 2mm) !important;
+        height: 62mm !important;
         page-break-inside: avoid !important;
-        break-inside: avoid-page !important;
-        padding: 5px !important;
-        border: 1px solid #cbd5e1 !important;
-        border-radius: 4px !important;
+        break-inside: avoid !important;
+        padding: 0 !important;
+        border: none !important;
+        border-radius: 0 !important;
         background-color: #ffffff !important;
         display: flex !important;
         flex-direction: column !important;
         justify-content: space-between !important;
         align-items: center !important;
-        height: 100% !important;
-        width: 100% !important;
         box-sizing: border-box !important;
         overflow: hidden !important;
         transform: none !important;
         box-shadow: none !important;
+        margin: 0 !important;
     }
 
-    .page-block .product-img-box {
+    .product-img-box {
         flex: 1 1 auto !important;
         width: 100% !important;
         min-height: 0 !important;
         max-height: none !important;
         background-color: #ffffff !important;
-        margin-bottom: 3px !important;
+        margin: 0 0 1mm 0 !important;
         padding: 0 !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
+        overflow: hidden !important;
     }
 
-    .page-block .product-img-box img {
+    .product-img-box img {
         max-width: 100% !important;
         max-height: 100% !important;
         width: auto !important;
@@ -1355,8 +1297,8 @@ body {
         display: block !important;
     }
 
-    .page-block .product-info {
-        margin-top: 3px !important;
+    .product-info {
+        margin-top: 0 !important;
         width: 100% !important;
         display: flex !important;
         flex-direction: column !important;
@@ -1364,19 +1306,24 @@ body {
         align-items: stretch !important;
         text-align: left !important;
         flex-shrink: 0 !important;
+        padding-top: 1mm !important;
+        border-top: 0.5px solid #e2e8f0 !important;
     }
 
-    .page-block .product-brand { font-size: 0.62em !important; }
-    .page-block .product-name {
-        font-size: 0.72em !important;
-        line-height: 1.15 !important;
+    .product-brand { font-size: 0.58em !important; color: #64748b !important; }
+    .product-name {
+        font-size: 0.7em !important;
+        line-height: 1.1 !important;
         -webkit-line-clamp: 2 !important;
         min-height: 0 !important;
+        color: #1e293b !important;
     }
-    .page-block .product-package { font-size: 0.65em !important; }
-    .page-block .product-price-tag {
-        font-size: 0.95em !important;
-        margin-top: 2px !important;
+    .product-package { font-size: 0.62em !important; color: #64748b !important; }
+    .product-price-tag {
+        font-size: 0.92em !important;
+        margin-top: 0.5mm !important;
         text-align: right !important;
+        color: #059669 !important;
+        font-weight: 800 !important;
     }
 }

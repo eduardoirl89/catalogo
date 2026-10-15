@@ -26,10 +26,6 @@ const WHATSAPP_MESSAGE = CONFIG.WHATSAPP_MESSAGE || "Hola, te comparto el catál
 
 const UNKNOWN_BRAND_LABEL = "SIN MARCA";
 
-const PDF_COLS = 3;
-const PDF_ROWS = 4;
-const PDF_ITEMS_PER_PAGE = PDF_COLS * PDF_ROWS;
-
 const PLACEHOLDER_SVG = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="0 0 24 24" fill="none" stroke="%23cbd5e1" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>';
 
 const filterState = {
@@ -40,6 +36,8 @@ const filterState = {
 let rawProductsData = [];
 let lastScrollY = window.scrollY;
 let searchDebounceTimer = null;
+let isPrinting = false;
+let printResetTimer = null;
 
 function logDebug(...args) { if (ENABLE_DEBUG_LOGS) console.log("[Catálogo]", ...args); }
 function logWarn(...args) { if (ENABLE_DEBUG_LOGS) console.warn("[Catálogo]", ...args); }
@@ -68,6 +66,16 @@ function escapeHtml(str) {
 }
 
 function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+function resetPrintState() {
+    isPrinting = false;
+    if (printResetTimer) {
+        clearTimeout(printResetTimer);
+        printResetTimer = null;
+    }
+    const overlay = document.getElementById("pdfLoadingOverlay");
+    if (overlay) overlay.classList.remove("active");
+}
 
 // =========================================================================
 // CARGA INICIAL
@@ -99,6 +107,21 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     window.addEventListener("scroll", handleMobileScroll, { passive: true });
+
+    // Restaurar estado al terminar la impresión
+    window.addEventListener("afterprint", resetPrintState);
+    if (window.matchMedia) {
+        const mql = window.matchMedia("print");
+        if (mql.addEventListener) {
+            mql.addEventListener("change", (e) => {
+                if (!e.matches) resetPrintState();
+            });
+        } else if (mql.addListener) {
+            mql.addListener((e) => {
+                if (!e.matches) resetPrintState();
+            });
+        }
+    }
 });
 
 function loadProducts() {
@@ -222,16 +245,12 @@ function buildWhatsAppLink(phone) {
     return `https://wa.me/${num}`;
 }
 
-// Ahora prioriza la URL de Maps del CSV. Si no existe, cae a búsqueda por dirección.
 function resolveMapsLink(mapsUrl, address) {
-    // 1. Si viene URL explícita de Maps, usarla tal cual
     if (mapsUrl && mapsUrl.trim() !== "") {
         const m = mapsUrl.trim();
-        // Asegurar que tiene protocolo
         if (m.startsWith("http://") || m.startsWith("https://")) return m;
         return `https://${m}`;
     }
-    // 2. Fallback: buscar por dirección
     if (address && address.trim() !== "") {
         return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
     }
@@ -284,11 +303,10 @@ function loadCompanyData() {
             const date = getVal("Fecha");
             const logoUrlRaw = getVal("Logo");
             const qrUrlRaw = getVal("QR");
-            const mapsUrlRaw = getVal("Maps"); // ← NUEVO
+            const mapsUrlRaw = getVal("Maps");
 
             logDebug("Maps URL detectada:", mapsUrlRaw);
 
-            // Resolver link de Maps (CSV primero, dirección como fallback)
             const mapsLink = resolveMapsLink(mapsUrlRaw, address);
 
             if (companyName) document.getElementById("sessionLabel").textContent = companyName;
@@ -313,11 +331,9 @@ function loadCompanyData() {
                 if (socialLink) socialLink.href = buildSocialLink(social);
             }
 
-            // Link de Maps: usar CSV si existe, si no la dirección
             const addressLink = document.getElementById("coverFooterAddressLink");
             if (addressLink) addressLink.href = mapsLink;
 
-            // Badge del header (logo) → Maps
             const badgeLogo = document.getElementById("companyBadgeLogo");
             const badgeFallback = document.getElementById("companyBadgeFallback");
             const badgeLink = document.getElementById("companyBadgeLink");
@@ -339,7 +355,6 @@ function loadCompanyData() {
                 };
             }
 
-            // Logo en la portada PDF
             const logoImg = document.getElementById("companyLogoImg");
             if (logoImg && logoUrlRaw) {
                 const finalUrl = normalizeImageUrl(logoUrlRaw);
@@ -604,155 +619,68 @@ function clearAllFilters() {
 }
 
 // =========================================================================
-// PREPARACIÓN DE PDF
+// PREPARACIÓN DE PDF — FLUJO CONTINUO SIN PAGINACIÓN
 // =========================================================================
 
 function prepareAndPrint() {
+    if (isPrinting) return;
+    isPrinting = true;
+
     const overlay = document.getElementById("pdfLoadingOverlay");
     const subtext = document.getElementById("pdfLoadingSubtext");
 
     if (!INCLUDE_COVER_ON_PRINT) document.body.classList.add("no-print-cover");
 
-    repaginateForPrint();
+    // Salvaguarda: si algo falla, liberar el botón después de 60s
+    if (printResetTimer) clearTimeout(printResetTimer);
+    printResetTimer = setTimeout(resetPrintState, 60000);
 
     const images = Array.from(document.querySelectorAll("#catalogContainer img, #pdfCoverSection img"));
     const total = images.length;
     let loaded = 0;
 
-    if (total === 0) { window.print(); return; }
+    if (total > 0 && overlay) {
+        overlay.classList.add("active");
+        if (subtext) subtext.textContent = `Cargando imágenes (0/${total})`;
+    }
 
-    if (overlay) overlay.classList.add("active");
-    if (subtext) subtext.textContent = `Cargando imágenes (0/${total})`;
-
-    return new Promise((resolve) => {
-        const checkDone = () => {
-            if (loaded >= total) {
-                setTimeout(() => {
-                    if (overlay) overlay.classList.remove("active");
-                    window.print();
-                    resolve();
-                }, 300);
-            }
-        };
-
-        images.forEach((img) => {
-            if (img.complete && img.naturalHeight !== 0) {
-                loaded++;
-                if (subtext) subtext.textContent = `Cargando imágenes (${loaded}/${total})`;
-                checkDone();
-                return;
-            }
-            img.loading = "eager";
-            const onLoad = () => { loaded++; if (subtext) subtext.textContent = `Cargando imágenes (${loaded}/${total})`; checkDone(); };
-            const onError = () => { loaded++; if (subtext) subtext.textContent = `Cargando imágenes (${loaded}/${total})`; checkDone(); };
-            img.addEventListener("load", onLoad, { once: true });
-            img.addEventListener("error", onError, { once: true });
+    const proceedToPrint = () => {
+        if (overlay) overlay.classList.remove("active");
+        setTimeout(() => {
+            window.print();
+            // No liberamos isPrinting aquí; lo hace afterprint o matchMedia.
+            // Como red de seguridad, si en 2s no se libera, lo hacemos nosotros.
             setTimeout(() => {
-                if (!img.complete) { loaded++; if (subtext) subtext.textContent = `Cargando imágenes (${loaded}/${total})`; checkDone(); }
-            }, 10000);
-        });
-    });
-}
+                if (isPrinting) resetPrintState();
+            }, 2000);
+        }, 100);
+    };
 
-function repaginateForPrint() {
-    const container = document.getElementById("catalogContainer");
-    if (!container) return;
-
-    if (!container.dataset.originalHtml) {
-        container.dataset.originalHtml = container.innerHTML;
+    if (total === 0) {
+        proceedToPrint();
+        return;
     }
 
-    const brandSections = Array.from(container.querySelectorAll(".brand-section"));
-    const groups = [];
+    const checkDone = () => {
+        if (loaded >= total) setTimeout(proceedToPrint, 200);
+    };
 
-    if (brandSections.length > 0) {
-        brandSections.forEach(section => {
-            const brandName = section.querySelector(".brand-section-name")?.textContent || "";
-            const isUnknown = section.classList.contains("is-unknown");
-            const cards = Array.from(section.querySelectorAll(".product-card"));
-            if (cards.length > 0) {
-                groups.push({ brand: brandName, count: cards.length, cards, isUnknown });
-            }
-        });
-    } else {
-        const allCards = Array.from(container.querySelectorAll(".product-card"));
-        if (allCards.length === 0) return;
-        const map = {};
-        const order = [];
-        allCards.forEach(card => {
-            const brandEl = card.querySelector(".product-brand");
-            const brandName = brandEl ? brandEl.textContent.trim() : UNKNOWN_BRAND_LABEL;
-            if (!map[brandName]) { map[brandName] = []; order.push(brandName); }
-            map[brandName].push(card);
-        });
-        order.forEach(brandName => {
-            groups.push({
-                brand: brandName,
-                count: map[brandName].length,
-                cards: map[brandName],
-                isUnknown: brandName === UNKNOWN_BRAND_LABEL
-            });
-        });
-    }
-
-    container.innerHTML = "";
-
-    let currentPage = null;
-    let productsInPage = 0;
-
-    function newPage() {
-        currentPage = document.createElement("div");
-        currentPage.className = "page-block";
-        container.appendChild(currentPage);
-        productsInPage = 0;
-    }
-
-    groups.forEach(group => {
-        if (!currentPage || productsInPage >= PDF_ITEMS_PER_PAGE) newPage();
-
-        let cardIndex = 0;
-
-        while (cardIndex < group.cards.length) {
-            if (productsInPage >= PDF_ITEMS_PER_PAGE) newPage();
-
-            const espacio = PDF_ITEMS_PER_PAGE - productsInPage;
-            const porcion = Math.min(group.cards.length - cardIndex, espacio);
-
-            const groupBlock = document.createElement("div");
-            groupBlock.className = "print-brand-block";
-
-            const divider = document.createElement("div");
-            divider.className = "brand-divider" + (group.isUnknown ? " is-unknown" : "");
-            divider.innerHTML = `
-                <span class="brand-divider-name">${group.brand}</span>
-                <span class="brand-divider-count">${group.count} ${group.count === 1 ? "producto" : "productos"}</span>
-            `;
-            groupBlock.appendChild(divider);
-
-            const grid = document.createElement("div");
-            grid.className = "products-grid";
-            for (let k = 0; k < porcion; k++) {
-                grid.appendChild(group.cards[cardIndex + k].cloneNode(true));
-            }
-            groupBlock.appendChild(grid);
-
-            currentPage.appendChild(groupBlock);
-
-            cardIndex += porcion;
-            productsInPage += porcion;
+    images.forEach((img) => {
+        if (img.complete && img.naturalHeight !== 0) {
+            loaded++;
+            if (subtext) subtext.textContent = `Cargando imágenes (${loaded}/${total})`;
+            checkDone();
+            return;
         }
+        img.loading = "eager";
+        const onLoad = () => { loaded++; if (subtext) subtext.textContent = `Cargando imágenes (${loaded}/${total})`; checkDone(); };
+        const onError = () => { loaded++; if (subtext) subtext.textContent = `Cargando imágenes (${loaded}/${total})`; checkDone(); };
+        img.addEventListener("load", onLoad, { once: true });
+        img.addEventListener("error", onError, { once: true });
+        setTimeout(() => {
+            if (!img.complete) { loaded++; if (subtext) subtext.textContent = `Cargando imágenes (${loaded}/${total})`; checkDone(); }
+        }, 8000);
     });
-
-    window.addEventListener("afterprint", restoreWebLayout, { once: true });
-}
-
-function restoreWebLayout() {
-    const container = document.getElementById("catalogContainer");
-    if (!container) return;
-    if (container.dataset.originalHtml) {
-        container.innerHTML = container.dataset.originalHtml;
-        delete container.dataset.originalHtml;
-    }
 }
 
 // =========================================================================
